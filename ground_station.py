@@ -118,6 +118,48 @@ class GroundStation:
         """航向控制"""
         return self.send_command('yaw', direction=direction, degrees=degrees, relative=relative)
 
+    def idle_test(self, duration=5):
+        """
+        怠速测试（不起飞情况下测试电机响应）
+
+        Args:
+            duration: 测试时长（秒），默认5秒
+
+        Returns:
+            bool: 操作是否成功
+        """
+        return self.send_command('idle_test', duration=duration)
+
+    def system_check(self):
+        """
+        系统自检
+
+        Returns:
+            bool: 操作是否成功
+        """
+        return self.send_command('system_check')
+
+    def execute_rotation_maneuver(self, altitude=2, angle=180, direction=1, speed=10):
+        """
+        执行完整旋转机动
+
+        Args:
+            altitude: 旋转时的目标高度（米），默认2米
+            angle: 旋转角度（度），默认180度
+            direction: 1=顺时针, -1=逆时针，默认1
+            speed: 旋转速度 (度/秒)，默认10
+
+        Returns:
+            bool: 操作是否成功
+        """
+        return self.send_command(
+            'execute_rotation_maneuver',
+            altitude=altitude,
+            angle=angle,
+            direction=direction,
+            speed=speed
+        )
+
     def get_status(self):
         """获取当前无人机状态"""
         with self.lock:
@@ -141,8 +183,11 @@ def interactive_control(gs):
     print("  4. RC覆盖 [roll] [pitch] [throttle] [yaw] [持续时间]")
     print("  5. 速度控制 [vx] [vy] [vz] [持续时间]")
     print("  6. 航向控制 [方向:1/-1] [角度] [相对:1/0]")
-    print("  7. 状态 - 查看当前无人机状态")
-    print("  8. 退出 - 断开连接")
+    print("  7. 怠速测试 [时长] - idle_test [duration]")
+    print("  8. 系统自检 - system_check")
+    print("  9. 旋转机动 [高度] [角度] [方向:1/-1] [速度]")
+    print("  10. 状态 - 查看当前无人机状态")
+    print("  11. 退出 - 断开连接")
     print("======================\n")
 
     while True:
@@ -186,11 +231,25 @@ def interactive_control(gs):
                 relative = bool(int(parts[3])) if len(parts) > 3 else True
                 gs.yaw_control(direction, degrees, relative)
 
-            elif action in ['7', '状态']:
+            elif action in ['7', '怠速测试']:
+                duration = int(parts[1]) if len(parts) > 1 else 5
+                gs.idle_test(duration)
+
+            elif action in ['8', '系统自检']:
+                gs.system_check()
+
+            elif action in ['9', '旋转机动']:
+                altitude = float(parts[1]) if len(parts) > 1 else 2
+                angle = float(parts[2]) if len(parts) > 2 else 180
+                direction = int(parts[3]) if len(parts) > 3 else 1
+                speed = float(parts[4]) if len(parts) > 4 else 10
+                gs.execute_rotation_maneuver(altitude, angle, direction, speed)
+
+            elif action in ['10', '状态']:
                 status = gs.get_status()
                 print(f"\n当前状态: {json.dumps(status, indent=2, ensure_ascii=False)}")
 
-            elif action in ['8', '退出']:
+            elif action in ['11', '退出']:
                 gs.disconnect()
                 break
 
