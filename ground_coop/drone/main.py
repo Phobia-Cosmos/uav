@@ -277,20 +277,24 @@ class DroneServer:
         self.logger.info(f"Running test: {script_path}")
         
         try:
-            result = subprocess.run(
+            process = subprocess.Popen(
                 ["python3", script_path],
-                timeout=60,
-                capture_output=True,
-                text=True
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1
             )
             
-            if result.returncode == 0:
+            for line in process.stdout:
+                print(f"[TEST] {line.rstrip()}")
+            
+            process.wait()
+            
+            if process.returncode == 0:
                 self.logger.info(f"Test completed successfully")
             else:
-                self.logger.error(f"Test failed: {result.stderr}")
+                self.logger.error(f"Test failed with exit code: {process.returncode}")
                 
-        except subprocess.TimeoutExpired:
-            self.logger.error(f"Test timed out")
         except Exception as e:
             self.logger.error(f"Test error: {e}")
     
