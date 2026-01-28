@@ -55,6 +55,7 @@ case "${1:-}" in
         ;;
 esac
 
+# TODO：shift是什么？$@？
 shift
 
 if [ -n "$MODULE" ]; then

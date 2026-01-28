@@ -11,6 +11,7 @@ import os
 import time
 import signal
 from pathlib import Path
+from typing import Optional
 
 # 确保common模块可导入
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -20,7 +21,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from common import (
     get_logger, get_config, parse_message,
     msg_start, msg_stop, msg_control, msg_heartbeat,
-    TCPServer, TCPConnection,
+    TCPClient, TCPConnection,
     HeartbeatManager, HeartbeatCallback
 )
 
@@ -38,10 +39,11 @@ class GroundStation:
         
         self.heartbeat_config = config.get_heartbeat_config()
         
-        self.drone_server: TCPServer = None
-        self.dog_server: TCPServer = None
-        self.drone_connection: Optional[TCPConnection] = None
-        self.dog_connection: Optional[TCPConnection] = None
+        self.drone_server = None
+        self.dog_server = None
+        self.drone_client = None
+        self.drone_connection = None
+        self.dog_connection = None
         
         self.running = False
         self.last_drone_status = None
@@ -62,65 +64,35 @@ class GroundStation:
         self.logger.warning("Heartbeat timeout from devices")
     
     def _send_heartbeats(self):
-        if self.drone_connection:
+        if self.drone_client and self.drone_client.is_connected:
             try:
-                self.drone_connection.send(msg_heartbeat().to_json().encode())
+                self.drone_client.send(msg_heartbeat().to_json().encode())
             except:
                 pass
-    
-    def start(self):
-        self.logger.info(f"Starting ground station...")
-        self.logger.info(f"Drone port: {self.drone_port}, Dog port: {self.dog_port}")
-        
-        self.drone_server = TCPServer(port=self.drone_port)
-        self.drone_server.set_callbacks(
-            on_client_connected=self._on_drone_connected,
-            on_data=self._on_drone_data
-        )
-        
-        self.dog_server = TCPServer(port=self.dog_port)
-        self.dog_server.set_callbacks(
-            on_client_connected=self._on_dog_connected,
-            on_data=self._on_dog_data
-        )
-        
-        if not self.drone_server.start():
-            self.logger.error("Failed to start drone server")
-            return False
-        
-        if not self.dog_server.start():
-            self.logger.error("Failed to start dog server")
-            return False
-        
-        self.running = True
-        self.heartbeat.start()
-        
-        self.logger.info(f"Ground station started")
-        self.logger.info(f"Waiting for connections...")
-        return True
     
     def stop(self):
         self.logger.info("Stopping ground station...")
         self.running = False
         self.heartbeat.stop()
         
-        if self.drone_server:
-            self.drone_server.stop()
-        if self.dog_server:
-            self.dog_server.stop()
+        if self.drone_client:
+            self.drone_client.disconnect()
         
         self.logger.info("Ground station stopped")
     
-    def _on_drone_connected(self, conn: TCPConnection):
-        self.logger.info(f"Drone connected: {conn.address}")
-        self.drone_connection = conn
+    def _on_drone_connected(self):
+        self.logger.info(f"Drone connected: {self.drone_ip}:{self.drone_port}")
         self.heartbeat.mark_received()
+    
+    def _on_drone_disconnected(self):
+        self.logger.info(f"Drone disconnected")
+        self.heartbeat.reset()
     
     def _on_dog_connected(self, conn: TCPConnection):
         self.logger.info(f"Dog connected: {conn.address}")
         self.dog_connection = conn
     
-    def _on_drone_data(self, conn: TCPConnection, data: bytes):
+    def _on_drone_data(self, data: bytes):
         try:
             text = data.decode('utf-8')
             msg = parse_message(text)
@@ -171,9 +143,9 @@ class GroundStation:
         print(f"\n[Dog] Move {'SUCCESS' if success else 'FAILED'} | Pos: {pos}")
     
     def send_to_drone(self, msg):
-        if self.drone_connection:
+        if self.drone_client and self.drone_client.is_connected:
             try:
-                self.drone_connection.send(msg.to_json().encode())
+                self.drone_client.send(msg.to_json().encode())
                 return True
             except Exception as e:
                 self.logger.error(f"Failed to send to drone: {e}")

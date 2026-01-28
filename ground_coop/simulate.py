@@ -42,9 +42,11 @@ class SimulatedDog:
     
     def __init__(self, port):
         self.port = port
+        # TODO：print是什么logger？
         self.logger = print
         self.position = {"x": 0.0, "y": 0.0, "yaw": 0.0}
         self.running = False
+        # TODO：这个是什么？
         self.server = None
         self.drone_conn = None
     

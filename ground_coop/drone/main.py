@@ -11,6 +11,7 @@ import time
 import signal
 import threading
 from pathlib import Path
+from typing import Optional
 
 # 确保common模块可导入
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -41,11 +42,11 @@ class DroneServer:
         self.flight_config = config.get_flight_config()
         self.control_config = config.get_control_config()
         
-        self.pc_server: TCPServer = None
-        self.pc_connection: Optional[TCPConnection] = None
+        self.pc_server = None
+        self.pc_connection = None
         
         self.flight = FlightController()
-        self.dog_commander: Optional[DogCommander] = None
+        self.dog_commander = None
         
         self.running = False
         self.control_mode = False
@@ -236,17 +237,19 @@ class DroneServer:
             except Exception as e:
                 self.logger.error(f"Failed to send response: {e}")
     
-    def _send_status(self, state: str = None, extra: dict = None):
+    def _send_status(self, state: str = "unknown", extra: dict = None):
         self.flight.update_status()
+        current_state = state if state else (self.flight.state.value if self.flight.state else "unknown")
+        current_extra = extra if extra else {}
         status = msg_status(
-            state=state or self.flight.state.value,
+            state=current_state,
             altitude=self.flight.status.altitude,
             battery=self.flight.status.battery,
             position={
                 "lat": self.flight.status.latitude,
                 "lon": self.flight.status.longitude
             },
-            extra=extra
+            extra=current_extra
         )
         self._send_response(status)
     
@@ -283,7 +286,7 @@ def main():
     if args.wifi:
         config.detect_wifi()
     
-    logger.info(f"Drone config: {config.get_device_config('dog')}")
+    logger.info(f"Drone config: {config.get_device_config('drone')}")
     
     server = DroneServer(config)
     

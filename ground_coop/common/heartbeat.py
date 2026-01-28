@@ -147,6 +147,7 @@ class HeartbeatManager:
 
     def stop(self):
         """停止心跳检测"""
+        # TODO：with的作用是什么？为什么要使用_lock？
         with self._lock:
             self._running = False
             self._state = HeartbeatState.STOPPED
