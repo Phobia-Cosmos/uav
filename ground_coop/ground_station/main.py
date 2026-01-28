@@ -13,6 +13,11 @@ import signal
 from pathlib import Path
 from typing import Optional
 
+try:
+    import readline
+except ImportError:
+    readline = None
+
 # 确保common模块可导入
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(PROJECT_ROOT) not in sys.path:
@@ -20,7 +25,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from common import (
     get_logger, get_config, parse_message,
-    msg_start, msg_stop, msg_control, msg_heartbeat, msg_test,
+    msg_start, msg_stop, msg_control, msg_heartbeat, msg_test, msg_stop_test,
     TCPClient, TCPConnection,
     HeartbeatManager, HeartbeatCallback
 )
@@ -219,6 +224,10 @@ class GroundStation:
     def send_test(self, filename: str):
         self.logger.info(f"Sending TEST command: {filename}")
         return self.send_to_drone(msg_test(filename))
+    
+    def send_stop_test(self):
+        self.logger.info("Sending STOP_TEST command")
+        return self.send_to_drone(msg_stop_test())
 
 
 def main():
@@ -311,13 +320,17 @@ def main():
                     print("\nNot connected to drone. Use 'connect' first.")
                 else:
                     if len(parts) < 2:
-                        print("\nUsage: test <filename>")
-                        print("  Example: test /home/orangepi/Desktop/uav/noGPS")
-                        print("  Example: test noGPS (relative to ground_coop dir)")
+                        test_file = "/home/orangepi/Desktop/uav/noGPS"
                     else:
                         test_file = parts[1]
-                        station.send_test(test_file)
-                        print(f"\nRunning test: {test_file}")
+                    station.send_test(test_file)
+                    print(f"\nRunning test: {test_file}")
+            elif action == "stop_test":
+                if station.drone_client and station.drone_client.is_connected:
+                    station.send_stop_test()
+                    print("\nStopping test...")
+                else:
+                    print("\nNot connected to drone.")
             elif action == "help":
                 print("\n=== Commands ===")
                 print("  connect              - Connect to drone")
@@ -326,7 +339,8 @@ def main():
                 print("  stop                 - Land and disarm")
                 print("  control              - Enter control mode (drone controls dog)")
                 print("  status               - Show drone status")
-                print("  test <filename>      - Run test script on drone (absolute path or relative)")
+                print("  test [filename]      - Run test script (default: /home/orangepi/Desktop/uav/noGPS)")
+                print("  stop_test            - Stop running test")
                 print("  quit                 - Exit program")
                 print("")
             elif action == "quit":

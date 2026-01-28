@@ -24,6 +24,7 @@ class MessageType(str, Enum):
     RETURN = "return"
     EMERGENCY_STOP = "emergency_stop"
     TEST = "test"
+    STOP_TEST = "stop_test"
     
     # 状态类
     STATUS = "status"
@@ -156,6 +157,10 @@ def msg_move_done(success: bool, position: Dict = None) -> Message:
 def msg_test(filename: str) -> Message:
     """测试消息 - 在无人机端运行指定测试脚本"""
     return create_message(MessageType.TEST.value, {"filename": filename})
+
+def msg_stop_test() -> Message:
+    """停止测试消息"""
+    return create_message(MessageType.STOP_TEST.value)
 
 def msg_status(
     state: str,

@@ -26,6 +26,7 @@ from common import (
 )
 from drone import FlightController, DogCommander, FlightState
 import subprocess
+import psutil
 
 
 class DroneServer:
@@ -52,6 +53,7 @@ class DroneServer:
         self.running = False
         self.control_mode = False
         self.last_dog_result = None
+        self.test_process = None
         
         self.heartbeat = HeartbeatManager(
             interval=self.heartbeat_config.get("interval", 10),
@@ -118,12 +120,29 @@ class DroneServer:
             except Exception as e:
                 self.logger.error(f"Flight cleanup error: {e}")
         
+        self._kill_test_process()
+        
         self.flight.disconnect()
         
         if self.dog_commander:
             self.dog_commander.disconnect()
         
         self.logger.info("Drone server stopped")
+    
+    def _kill_test_process(self):
+        """终止正在运行的测试进程"""
+        if self.test_process:
+            try:
+                self.logger.info("Stopping test process...")
+                parent = psutil.Process(self.test_process.pid)
+                for child in parent.children(recursive=True):
+                    child.terminate()
+                parent.terminate()
+                self.test_process.wait(timeout=5)
+            except Exception as e:
+                self.logger.error(f"Error killing test process: {e}")
+            finally:
+                self.test_process = None
     
     def _on_pc_connected(self, conn: TCPConnection):
         self.logger.info(f"PC connected: {conn.address}")
@@ -164,6 +183,8 @@ class DroneServer:
             self._handle_heartbeat(msg)
         elif msg_type == "test":
             self._handle_test(msg)
+        elif msg_type == "stop_test":
+            self._handle_stop_test()
         else:
             self.logger.warning(f"Unknown message: {msg_type}")
     
@@ -274,10 +295,12 @@ class DroneServer:
         else:
             script_path = f"/home/orangepi/Desktop/uav/ground_coop/{filename}.py"
         
+        self._kill_test_process()
+        
         self.logger.info(f"Running test: {script_path}")
         
         try:
-            process = subprocess.Popen(
+            self.test_process = subprocess.Popen(
                 ["python3", script_path],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -285,18 +308,28 @@ class DroneServer:
                 bufsize=1
             )
             
-            for line in process.stdout:
+            for line in self.test_process.stdout:
                 print(f"[TEST] {line.rstrip()}")
             
-            process.wait()
+            self.test_process.wait()
             
-            if process.returncode == 0:
+            if self.test_process.returncode == 0:
                 self.logger.info(f"Test completed successfully")
             else:
-                self.logger.error(f"Test failed with exit code: {process.returncode}")
+                self.logger.error(f"Test failed with exit code: {self.test_process.returncode}")
                 
         except Exception as e:
             self.logger.error(f"Test error: {e}")
+        finally:
+            self.test_process = None
+    
+    def _handle_stop_test(self):
+        """停止正在运行的测试"""
+        if self.test_process:
+            self._kill_test_process()
+            self.logger.info("Test stopped by user")
+        else:
+            self.logger.info("No test running")
     
     def _send_response(self, response):
         if self.pc_connection:
