@@ -25,6 +25,7 @@ from common import (
     HeartbeatManager, HeartbeatCallback
 )
 from drone import FlightController, DogCommander, FlightState
+import subprocess
 
 
 class DroneServer:
@@ -143,6 +144,8 @@ class DroneServer:
             self._handle_control(msg)
         elif msg_type == "heartbeat":
             self._handle_heartbeat(msg)
+        elif msg_type == "test":
+            self._handle_test(msg)
         else:
             self.logger.warning(f"Unknown message: {msg_type}")
     
@@ -238,6 +241,35 @@ class DroneServer:
     def _handle_heartbeat(self, msg):
         self.heartbeat.mark_received()
         self._send_response(msg_heartbeat_ack())
+    
+    def _handle_test(self, msg):
+        filename = msg.payload.get("filename", "")
+        
+        if not filename:
+            self.logger.warning("Test filename is empty")
+            return
+        
+        self.logger.info(f"Running test: {filename}.py")
+        
+        script_path = f"/home/orangepi/Desktop/uav/ground_coop/{filename}.py"
+        
+        try:
+            result = subprocess.run(
+                ["python3", script_path],
+                timeout=60,
+                capture_output=True,
+                text=True
+            )
+            
+            if result.returncode == 0:
+                self.logger.info(f"Test {filename} completed successfully")
+            else:
+                self.logger.error(f"Test {filename} failed: {result.stderr}")
+                
+        except subprocess.TimeoutExpired:
+            self.logger.error(f"Test {filename} timed out")
+        except Exception as e:
+            self.logger.error(f"Test {filename} error: {e}")
     
     def _send_response(self, response):
         if self.pc_connection:

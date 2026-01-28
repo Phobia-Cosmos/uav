@@ -23,14 +23,13 @@ class MessageType(str, Enum):
     CONTROL = "control"
     RETURN = "return"
     EMERGENCY_STOP = "emergency_stop"
+    TEST = "test"
     
     # 状态类
     STATUS = "status"
     MOVE_DONE = "move_done"
     HEARTBEAT = "heartbeat"
     HEARTBEAT_ACK = "heartbeat_ack"
-    
-    # 错误类
     ERROR = "error"
     
     # 控制类
@@ -153,6 +152,10 @@ def msg_move_done(success: bool, position: Dict = None) -> Message:
         "success": success,
         "position": position or {}
     })
+
+def msg_test(filename: str) -> Message:
+    """测试消息 - 在无人机端运行指定测试脚本"""
+    return create_message(MessageType.TEST.value, {"filename": filename})
 
 def msg_status(
     state: str,

@@ -30,6 +30,7 @@ from .protocol import (
     msg_heartbeat_ack,
     msg_error,
     msg_quit,
+    msg_test,
     DeviceState,
     ErrorCode
 )
@@ -57,6 +58,7 @@ __all__ = [
     'msg_heartbeat_ack',
     'msg_error',
     'msg_quit',
+    'msg_test',
     'DeviceState',
     'ErrorCode',
     'HeartbeatManager',

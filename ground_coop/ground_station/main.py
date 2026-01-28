@@ -214,6 +214,10 @@ class GroundStation:
     def send_control(self):
         self.logger.info("Sending CONTROL command")
         return self.send_to_drone(msg_control())
+    
+    def send_test(self, filename: str):
+        self.logger.info(f"Sending TEST command: {filename}")
+        return self.send_to_drone(msg_test(filename))
 
 
 def main():
@@ -303,6 +307,19 @@ def main():
                     print("\nWaiting for drone status...")
                 else:
                     print("\nNot connected to drone. Use 'connect' to connect.")
+            elif action == "test":
+                if not connected:
+                    print("\nNot connected to drone. Use 'connect' first.")
+                else:
+                    if len(parts) < 2:
+                        print("\nUsage: test <filename>")
+                        print("  Example: test noGPS")
+                    else:
+                        test_file = parts[1]
+                        if test_file.endswith('.py'):
+                            test_file = test_file[:-3]
+                        station.send_test(test_file)
+                        print(f"\nRunning test: {test_file}.py")
             elif action == "quit":
                 print("Quitting...")
                 break
