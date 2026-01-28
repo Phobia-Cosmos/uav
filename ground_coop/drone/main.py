@@ -100,6 +100,24 @@ class DroneServer:
         if self.pc_server:
             self.pc_server.stop()
         
+        if self.flight.vehicle:
+            self.logger.info("Cleaning up flight controller...")
+            
+            try:
+                from dronekit import VehicleMode
+                
+                if self.flight.state not in [FlightState.DISARMED, FlightState.LANDED]:
+                    self.logger.info("Landing...")
+                    self.flight.land()
+                    time.sleep(2)
+                
+                if self.flight.vehicle.armed:
+                    self.logger.info("Disarming motors...")
+                    self.flight.disarm()
+                
+            except Exception as e:
+                self.logger.error(f"Flight cleanup error: {e}")
+        
         self.flight.disconnect()
         
         if self.dog_commander:

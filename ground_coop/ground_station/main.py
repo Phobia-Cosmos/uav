@@ -20,7 +20,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from common import (
     get_logger, get_config, parse_message,
-    msg_start, msg_stop, msg_control, msg_heartbeat,
+    msg_start, msg_stop, msg_control, msg_heartbeat, msg_test,
     TCPClient, TCPConnection,
     HeartbeatManager, HeartbeatCallback
 )
@@ -132,6 +132,7 @@ class GroundStation:
     def _on_drone_disconnected(self):
         self.logger.info(f"Drone disconnected")
         print(f"\n[Drone disconnected]")
+        self.heartbeat.reset()
     
     def _on_dog_connected(self, conn: TCPConnection):
         self.logger.info(f"Dog connected: {conn.address}")
@@ -262,7 +263,6 @@ def main():
     print("Commands: connect, quit")
     print("-" * 50)
     
-    connected = False
     while station.running:
         try:
             cmd = input("\n> ").strip().lower()
@@ -274,41 +274,40 @@ def main():
             action = parts[0]
             
             if action == "connect":
-                if station.connect_to_drone():
-                    connected = True
-                    print("\nDrone connected! Available commands:")
-                    print("  start [alt] [mode], stop, control, status, disconnect, quit")
+                station.connect_to_drone()
             elif action == "disconnect":
-                if station.drone_client:
+                if station.drone_client and station.drone_client.is_connected:
                     station.drone_client.disconnect()
-                    connected = False
                     print("\nDisconnected from drone. Use 'connect' to reconnect.")
+                else:
+                    print("\nNot connected to drone.")
             elif action == "start":
-                if not connected:
+                if not (station.drone_client and station.drone_client.is_connected):
                     print("\nNot connected to drone. Use 'connect' first.")
                 else:
                     alt = float(parts[1]) if len(parts) > 1 else 3.0
                     mode = parts[2].upper() if len(parts) > 2 else "GUIDED"
                     station.send_start(alt, mode)
             elif action == "stop":
-                if connected:
+                if station.drone_client and station.drone_client.is_connected:
                     station.send_stop()
                 else:
                     print("\nNot connected to drone.")
             elif action == "control":
-                if connected:
+                if station.drone_client and station.drone_client.is_connected:
                     station.send_control()
                 else:
                     print("\nNot connected to drone.")
             elif action == "status":
-                if connected and station.last_drone_status:
-                    station._display_status("Drone", station.last_drone_status)
-                elif connected:
-                    print("\nWaiting for drone status...")
+                if station.drone_client and station.drone_client.is_connected:
+                    if station.last_drone_status:
+                        station._display_status("Drone", station.last_drone_status)
+                    else:
+                        print("\nWaiting for drone status...")
                 else:
                     print("\nNot connected to drone. Use 'connect' to connect.")
             elif action == "test":
-                if not connected:
+                if not (station.drone_client and station.drone_client.is_connected):
                     print("\nNot connected to drone. Use 'connect' first.")
                 else:
                     if len(parts) < 2:
