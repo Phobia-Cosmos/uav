@@ -130,8 +130,6 @@ class GroundStation:
         self.logger.info(f"Drone connected: {self.drone_ip}:{self.drone_connect_port}")
         print(f"\n[Drone connected!]")
         self.heartbeat.mark_received()
-        time.sleep(0.2)
-        self._send_status_request()
     
     def _send_status_request(self):
         """请求无人机状态"""
