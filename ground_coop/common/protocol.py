@@ -25,6 +25,8 @@ class MessageType(str, Enum):
     EMERGENCY_STOP = "emergency_stop"
     TEST = "test"
     STOP_TEST = "stop_test"
+    STATUS_REQUEST = "status_request"
+    RESET = "reset"
     
     # 状态类
     STATUS = "status"
@@ -199,6 +201,14 @@ def msg_error(error_code: str, error_msg: str) -> Message:
 def msg_quit() -> Message:
     """退出消息"""
     return create_message(MessageType.QUIT.value)
+
+def msg_status_request() -> Message:
+    """状态请求消息"""
+    return create_message(MessageType.STATUS_REQUEST.value)
+
+def msg_reset() -> Message:
+    """重置消息 - 重置飞控连接和状态"""
+    return create_message(MessageType.RESET.value)
 
 
 # 状态常量

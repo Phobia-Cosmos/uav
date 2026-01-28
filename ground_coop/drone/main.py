@@ -194,6 +194,12 @@ class DroneServer:
         elif msg_type == "stop_test":
             self.logger.info("Received stop_test command")
             self._handle_stop_test()
+        elif msg_type == "status_request":
+            self.logger.info("Received status_request command")
+            self._send_status()
+        elif msg_type == "reset":
+            self.logger.info("Received reset command")
+            self._handle_reset()
         else:
             self.logger.warning(f"Unknown message: {msg_type}")
     
@@ -346,6 +352,43 @@ class DroneServer:
             self.logger.info("Test stopped by user")
         else:
             self.logger.info("No test running")
+    
+    def _handle_reset(self):
+        """重置飞控连接和状态"""
+        self.logger.info("Resetting flight controller...")
+        
+        self._kill_test_process()
+        
+        self.control_mode = False
+        
+        if self.flight.vehicle:
+            try:
+                from dronekit import VehicleMode
+                
+                self.logger.info(f"Current state: {self.flight.state.value}")
+                
+                if self.flight.state not in [FlightState.DISARMED, FlightState.LANDED]:
+                    self.logger.info("Landing first...")
+                    self.flight.land()
+                    time.sleep(3)
+                
+                if self.flight.vehicle.armed:
+                    self.logger.info("Disarming motors...")
+                    if self.flight.disarm():
+                        self.logger.info("Motors disarmed")
+                    else:
+                        self.logger.warning("Failed to disarm")
+                
+                self.logger.info("Disconnecting from flight controller...")
+                self.flight.disconnect()
+                self.logger.info("Flight controller reset completed")
+                
+            except Exception as e:
+                self.logger.error(f"Reset error: {e}")
+        else:
+            self.logger.info("No flight controller connected")
+        
+        self._send_status()
     
     def _send_response(self, response):
         if self.pc_connection:

@@ -25,7 +25,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from common import (
     get_logger, get_config, parse_message,
-    msg_start, msg_stop, msg_control, msg_heartbeat, msg_test, msg_stop_test,
+    msg_start, msg_stop, msg_control, msg_heartbeat, msg_test, msg_stop_test, msg_status_request, msg_reset,
     TCPClient, TCPConnection,
     HeartbeatManager, HeartbeatCallback
 )
@@ -133,6 +133,12 @@ class GroundStation:
         self.logger.info(f"Drone connected: {self.drone_ip}:{self.drone_connect_port}")
         print(f"\n[Drone connected!]")
         self.heartbeat.mark_received()
+        self._send_status_request()
+    
+    def _send_status_request(self):
+        """请求无人机状态"""
+        self.send_to_drone(msg_status_request())
+        self._send_status_request()
     
     def _on_drone_disconnected(self):
         self.logger.info(f"Drone disconnected")
@@ -228,6 +234,10 @@ class GroundStation:
     def send_stop_test(self):
         self.logger.info("Sending STOP_TEST command")
         return self.send_to_drone(msg_stop_test())
+    
+    def send_reset(self):
+        self.logger.info("Sending RESET command")
+        return self.send_to_drone(msg_reset())
 
 
 def main():
@@ -331,6 +341,12 @@ def main():
                     print("\nStopping test...")
                 else:
                     print("\nNot connected to drone.")
+            elif action == "reset":
+                if station.drone_client and station.drone_client.is_connected:
+                    station.send_reset()
+                    print("\nResetting flight controller connection...")
+                else:
+                    print("\nNot connected to drone.")
             elif action == "help":
                 print("\n=== Commands ===")
                 print("  connect              - Connect to drone")
@@ -341,6 +357,7 @@ def main():
                 print("  status               - Show drone status")
                 print("  test [filename]      - Run test script (default: /home/orangepi/Desktop/uav/noGPS)")
                 print("  stop_test            - Stop running test")
+                print("  reset                - Reset flight controller connection and state")
                 print("  quit                 - Exit program")
                 print("")
             elif action == "quit":
