@@ -218,6 +218,7 @@ class GroundStation:
     
     def send_test(self, filename: str):
         self.logger.info(f"Sending TEST command: {filename}")
+        print(f"[DEBUG] Original: {filename}")
         return self.send_to_drone(msg_test(filename))
 
 
