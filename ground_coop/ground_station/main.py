@@ -218,7 +218,6 @@ class GroundStation:
     
     def send_test(self, filename: str):
         self.logger.info(f"Sending TEST command: {filename}")
-        print(f"[DEBUG] Original: {filename}")
         return self.send_to_drone(msg_test(filename))
 
 
@@ -266,13 +265,13 @@ def main():
     
     while station.running:
         try:
-            cmd = input("\n> ").strip().lower()
+            cmd = input("\n> ").strip()
             
             if not cmd:
                 continue
             
             parts = cmd.split()
-            action = parts[0]
+            action = parts[0].lower()
             
             if action == "connect":
                 station.connect_to_drone()
