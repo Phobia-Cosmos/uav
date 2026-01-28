@@ -275,30 +275,6 @@ def main():
             
             if action == "connect":
                 station.connect_to_drone()
-            elif action == "help":
-                print("\n=== Commands ===")
-                print("  connect              - Connect to drone")
-                print("  disconnect           - Disconnect from drone")
-                print("  start [alt] [mode]   - Takeoff (alt: meters, mode: GUIDED/STABILIZE/HOLD/ALT_HOLD)")
-                print("  stop                 - Land and disarm")
-                print("  control              - Enter control mode (drone controls dog)")
-                print("  status               - Show drone status")
-                print("  test <filename>      - Run test script on drone (absolute path or relative)")
-                print("  quit                 - Exit program")
-                print("")
-    
-    while station.running:
-        try:
-            cmd = input("\n> ").strip().lower()
-            
-            if not cmd:
-                continue
-            
-            parts = cmd.split()
-            action = parts[0]
-            
-            if action == "connect":
-                station.connect_to_drone()
             elif action == "disconnect":
                 if station.drone_client and station.drone_client.is_connected:
                     station.drone_client.disconnect()
@@ -350,14 +326,14 @@ def main():
                 print("  stop                 - Land and disarm")
                 print("  control              - Enter control mode (drone controls dog)")
                 print("  status               - Show drone status")
-                print("  test <filename>      - Run test script on drone (absolute path or relative to ground_coop)")
+                print("  test <filename>      - Run test script on drone (absolute path or relative)")
                 print("  quit                 - Exit program")
                 print("")
             elif action == "quit":
                 print("Quitting...")
                 break
             else:
-                print("Unknown command. Use: connect, start [alt] [mode], stop, control, status, disconnect, quit")
+                print("Unknown command. Use: connect, help, quit")
                 
         except EOFError:
             break
