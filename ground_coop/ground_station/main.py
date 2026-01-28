@@ -120,19 +120,12 @@ class GroundStation:
             self.drone_client.disconnect()
         
         self.logger.info("Ground station stopped")
-        self.logger.info("Stopping ground station...")
-        self.running = False
-        self.heartbeat.stop()
-        
-        if self.drone_client:
-            self.drone_client.disconnect()
-        
-        self.logger.info("Ground station stopped")
     
     def _on_drone_connected(self):
         self.logger.info(f"Drone connected: {self.drone_ip}:{self.drone_connect_port}")
         print(f"\n[Drone connected!]")
         self.heartbeat.mark_received()
+        time.sleep(0.2)
         self._send_status_request()
     
     def _send_status_request(self):

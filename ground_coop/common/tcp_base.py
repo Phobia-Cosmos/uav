@@ -188,7 +188,10 @@ class TCPClient:
         self._state = ConnectionState.DISCONNECTED
         
         if was_connected and self._on_disconnected:
-            self._on_disconnected()
+            try:
+                self._on_disconnected()
+            except:
+                pass
         
         # 自动重连
         if self._running and self.max_reconnect_attempts == 0:
