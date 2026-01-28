@@ -104,18 +104,26 @@ class DroneServer:
         
         if self.flight.vehicle:
             self.logger.info("Cleaning up flight controller...")
+            self.logger.info(f"Current state: {self.flight.state.value}")
             
             try:
                 from dronekit import VehicleMode
                 
                 if self.flight.state not in [FlightState.DISARMED, FlightState.LANDED]:
-                    self.logger.info("Landing...")
+                    self.logger.info("Executing landing...")
                     self.flight.land()
-                    time.sleep(2)
+                    time.sleep(3)
                 
                 if self.flight.vehicle.armed:
                     self.logger.info("Disarming motors...")
-                    self.flight.disarm()
+                    if self.flight.disarm():
+                        self.logger.info("Motors disarmed successfully")
+                    else:
+                        self.logger.warning("Failed to disarm motors")
+                else:
+                    self.logger.info("Motors already disarmed")
+                
+                self.logger.info("Flight controller cleanup completed")
                 
             except Exception as e:
                 self.logger.error(f"Flight cleanup error: {e}")
@@ -184,6 +192,7 @@ class DroneServer:
         elif msg_type == "test":
             self._handle_test(msg)
         elif msg_type == "stop_test":
+            self.logger.info("Received stop_test command")
             self._handle_stop_test()
         else:
             self.logger.warning(f"Unknown message: {msg_type}")
@@ -308,24 +317,31 @@ class DroneServer:
                 bufsize=1
             )
             
-            for line in self.test_process.stdout:
-                print(f"[TEST] {line.rstrip()}")
+            self.logger.info(f"Test started (PID: {self.test_process.pid})")
             
-            self.test_process.wait()
-            
-            if self.test_process.returncode == 0:
-                self.logger.info(f"Test completed successfully")
-            else:
-                self.logger.error(f"Test failed with exit code: {self.test_process.returncode}")
-                
         except Exception as e:
             self.logger.error(f"Test error: {e}")
-        finally:
             self.test_process = None
+    
+    def _check_test_output(self):
+        """检查测试输出（非阻塞）"""
+        if self.test_process and self.test_process.stdout:
+            line = self.test_process.stdout.readline()
+            if line:
+                print(f"[TEST] {line.rstrip()}")
+                return True
+            elif self.test_process.poll() is not None:
+                if self.test_process.returncode == 0:
+                    self.logger.info("Test completed successfully")
+                else:
+                    self.logger.error(f"Test failed with exit code: {self.test_process.returncode}")
+                self.test_process = None
+        return False
     
     def _handle_stop_test(self):
         """停止正在运行的测试"""
         if self.test_process:
+            self.logger.info("Stopping test process...")
             self._kill_test_process()
             self.logger.info("Test stopped by user")
         else:
@@ -409,10 +425,12 @@ def main():
             logger.info("Drone server is running. Press Ctrl+C to stop.")
             
             while server.running:
-                time.sleep(1)
+                server._check_test_output()
+                time.sleep(0.1)
     except Exception as e:
         logger.error(f"Server error: {e}")
     finally:
+        logger.info("Shutting down...")
         server.stop()
         logger.info("=== Drone Server Stopped ===")
 
