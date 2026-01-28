@@ -125,7 +125,8 @@ class DroneServer:
                 return
             
             self.heartbeat.mark_received()
-            self.logger.info(f"Received from PC: {msg.type}")
+            if msg.type != "heartbeat":
+                self.logger.info(f"Received from PC: {msg.type}")
             self._handle_message(msg)
             
         except Exception as e:
@@ -257,7 +258,12 @@ class DroneServer:
                 "lat": self.flight.status.latitude,
                 "lon": self.flight.status.longitude
             },
-            extra=current_extra
+            extra={
+                "pitch": round(self.flight.status.pitch, 1),
+                "roll": round(self.flight.status.roll, 1),
+                "yaw": round(self.flight.status.yaw, 1),
+                **current_extra
+            }
         )
         self._send_response(status)
     

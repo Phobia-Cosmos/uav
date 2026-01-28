@@ -176,8 +176,13 @@ class GroundStation:
         state = status.get("state", "unknown")
         alt = status.get("altitude", 0)
         battery = status.get("battery", 0)
+        pitch = status.get("pitch", 0)
+        roll = status.get("roll", 0)
+        yaw = status.get("yaw", 0)
         
-        print(f"\n[{device}] State: {state} | Alt: {alt:.1f}m | Battery: {battery}%")
+        print(f"\n[{device}] State: {state}")
+        print(f"         Alt: {alt:.1f}m | Battery: {battery}%")
+        print(f"         Pitch: {pitch:.1f}° | Roll: {roll:.1f}° | Yaw: {yaw:.1f}°")
     
     def _display_error(self, device: str, error: dict):
         print(f"\n[{device}] ERROR: {error.get('code')}: {error.get('message')}")
