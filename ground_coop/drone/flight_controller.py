@@ -176,12 +176,13 @@ class FlightController:
             self._logger.error(f"Disarming failed: {e}")
             return False
     
-    def takeoff(self, altitude: float) -> bool:
+    def takeoff(self, altitude: float, require_gps: bool = True) -> bool:
         """
         起飞
         
         Args:
             altitude: 目标高度（米）
+            require_gps: 是否需要GPS（室内飞行可设为False）
             
         Returns:
             是否成功
@@ -193,27 +194,37 @@ class FlightController:
             from dronekit import VehicleMode
             
             self.state = FlightState.TAKING_OFF
-            self._logger.info(f"Taking off to {altitude}m...")
+            self._logger.info(f"Taking off to {altitude}m... (GPS required: {require_gps})")
             
-            # 切换到GUIDED模式
-            self.vehicle.mode = VehicleMode("GUIDED")
+            if require_gps:
+                self.vehicle.mode = VehicleMode("GUIDED")
+            else:
+                self._logger.info("Using ALT_HOLD mode for indoor flight (no GPS required)")
+                self.vehicle.mode = VehicleMode("ALT_HOLD")
+            
             time.sleep(1)
             
-            # 解锁
             if not self.vehicle.armed:
                 if not self.arm():
                     return False
             
-            # 起飞
-            self.vehicle.simple_takeoff(altitude)
+            if require_gps:
+                self.vehicle.simple_takeoff(altitude)
+            else:
+                self._logger.info("Indoor takeoff: motors armed in ALT_HOLD mode")
             
-            # 等待到达目标高度
             for _ in range(60):
                 self.update_status()
-                if self.status.altitude >= altitude * 0.95:
-                    self.state = FlightState.HOVERING
-                    self._logger.info(f"Reached target altitude: {self.status.altitude:.1f}m")
-                    return True
+                if require_gps:
+                    if self.status.altitude >= altitude * 0.95:
+                        self.state = FlightState.HOVERING
+                        self._logger.info(f"Reached target altitude: {self.status.altitude:.1f}m")
+                        return True
+                else:
+                    if self.status.altitude >= altitude * 0.8:
+                        self.state = FlightState.HOVERING
+                        self._logger.info(f"Reached target altitude: {self.status.altitude:.1f}m")
+                        return True
                 time.sleep(0.5)
             
             self._logger.warning("Takeoff timeout, still climbing")

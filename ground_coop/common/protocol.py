@@ -124,9 +124,9 @@ def validate_message(json_str: str) -> tuple:
 
 # 便捷函数 - 创建各种消息
 
-def msg_start(altitude: float = 3.0) -> Message:
+def msg_start(altitude: float = 3.0, mode: str = "GUIDED") -> Message:
     """启动消息"""
-    return create_message(MessageType.START.value, {"altitude": altitude})
+    return create_message(MessageType.START.value, {"altitude": altitude, "mode": mode})
 
 def msg_stop() -> Message:
     """停止消息"""

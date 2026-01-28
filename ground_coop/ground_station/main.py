@@ -36,6 +36,7 @@ class GroundStation:
         self.drone_port = config.get_port("from_drone", "pc")
         self.dog_port = config.get_port("from_dog", "pc")
         self.drone_ip = config.get_ip("drone")
+        self.drone_connect_port = 5200  # PC 连接到无人机的端口
         
         self.heartbeat_config = config.get_heartbeat_config()
         
@@ -61,7 +62,8 @@ class GroundStation:
         self.logger.info("Ground station initialized")
     
     def _on_heartbeat_timeout(self):
-        self.logger.warning("Heartbeat timeout from devices")
+        self.logger.warning("Heartbeat timeout from drone")
+        print(f"\n[Warning: Drone heartbeat lost]")
     
     def _send_heartbeats(self):
         if self.drone_client and self.drone_client.is_connected:
@@ -69,6 +71,40 @@ class GroundStation:
                 self.drone_client.send(msg_heartbeat().to_json().encode())
             except:
                 pass
+    
+    def start(self):
+        self.logger.info("Starting ground station in monitor mode...")
+        self.logger.info(f"Drone: {self.drone_ip}:{self.drone_connect_port}")
+        self.logger.info("Waiting for drone connection...")
+        self.logger.info("Use 'connect' to connect, 'quit' to exit")
+        
+        self.running = True
+        self.heartbeat.start()
+        
+        self.logger.info(f"Ground station started")
+        return True
+    
+    def connect_to_drone(self):
+        """连接到无人机"""
+        print(f"\nConnecting to {self.drone_ip}:{self.drone_connect_port}...")
+        
+        if self.drone_client:
+            self.drone_client.disconnect()
+        
+        self.drone_client = TCPClient(host=self.drone_ip, port=self.drone_connect_port)
+        self.drone_client.set_callbacks(
+            on_connected=self._on_drone_connected,
+            on_disconnected=self._on_drone_disconnected,
+            on_data=self._on_drone_data
+        )
+        
+        if self.drone_client.connect():
+            print(f"Connected to drone!")
+            return True
+        else:
+            print(f"Failed to connect. Make sure drone is running on {self.drone_ip}:{self.drone_connect_port}")
+            print("Use 'quit' to exit, or wait and try 'connect' again.")
+            return False
     
     def stop(self):
         self.logger.info("Stopping ground station...")
@@ -79,14 +115,23 @@ class GroundStation:
             self.drone_client.disconnect()
         
         self.logger.info("Ground station stopped")
+        self.logger.info("Stopping ground station...")
+        self.running = False
+        self.heartbeat.stop()
+        
+        if self.drone_client:
+            self.drone_client.disconnect()
+        
+        self.logger.info("Ground station stopped")
     
     def _on_drone_connected(self):
-        self.logger.info(f"Drone connected: {self.drone_ip}:{self.drone_port}")
+        self.logger.info(f"Drone connected: {self.drone_ip}:{self.drone_connect_port}")
+        print(f"\n[Drone connected!]")
         self.heartbeat.mark_received()
     
     def _on_drone_disconnected(self):
         self.logger.info(f"Drone disconnected")
-        self.heartbeat.reset()
+        print(f"\n[Drone disconnected]")
     
     def _on_dog_connected(self, conn: TCPConnection):
         self.logger.info(f"Dog connected: {conn.address}")
@@ -153,9 +198,9 @@ class GroundStation:
             self.logger.warning("Drone not connected")
         return False
     
-    def send_start(self, altitude: float = 3.0):
-        self.logger.info(f"Sending START command: altitude={altitude}m")
-        return self.send_to_drone(msg_start(altitude))
+    def send_start(self, altitude: float = 3.0, mode: str = "GUIDED"):
+        self.logger.info(f"Sending START command: altitude={altitude}m, mode={mode}")
+        return self.send_to_drone(msg_start(altitude, mode))
     
     def send_stop(self):
         self.logger.info("Sending STOP command")
@@ -204,10 +249,11 @@ def main():
     print("\n" + "=" * 50)
     print("   Ground-Air Cooperation System")
     print("=" * 50)
-    print("\nWaiting for connections...")
-    print("Commands: start [altitude], stop, control, status, quit")
+    print("\nDrone not connected yet.")
+    print("Commands: connect, quit")
     print("-" * 50)
     
+    connected = False
     while station.running:
         try:
             cmd = input("\n> ").strip().lower()
@@ -218,23 +264,45 @@ def main():
             parts = cmd.split()
             action = parts[0]
             
-            if action == "start":
-                alt = float(parts[1]) if len(parts) > 1 else 3.0
-                station.send_start(alt)
+            if action == "connect":
+                if station.connect_to_drone():
+                    connected = True
+                    print("\nDrone connected! Available commands:")
+                    print("  start [alt] [mode], stop, control, status, disconnect, quit")
+            elif action == "disconnect":
+                if station.drone_client:
+                    station.drone_client.disconnect()
+                    connected = False
+                    print("\nDisconnected from drone. Use 'connect' to reconnect.")
+            elif action == "start":
+                if not connected:
+                    print("\nNot connected to drone. Use 'connect' first.")
+                else:
+                    alt = float(parts[1]) if len(parts) > 1 else 3.0
+                    mode = parts[2].upper() if len(parts) > 2 else "GUIDED"
+                    station.send_start(alt, mode)
             elif action == "stop":
-                station.send_stop()
+                if connected:
+                    station.send_stop()
+                else:
+                    print("\nNot connected to drone.")
             elif action == "control":
-                station.send_control()
+                if connected:
+                    station.send_control()
+                else:
+                    print("\nNot connected to drone.")
             elif action == "status":
-                if station.last_drone_status:
+                if connected and station.last_drone_status:
                     station._display_status("Drone", station.last_drone_status)
-                if station.last_dog_status:
-                    station._display_status("Dog", station.last_dog_status)
+                elif connected:
+                    print("\nWaiting for drone status...")
+                else:
+                    print("\nNot connected to drone. Use 'connect' to connect.")
             elif action == "quit":
                 print("Quitting...")
                 break
             else:
-                print("Unknown command. Use: start [alt], stop, control, status, quit")
+                print("Unknown command. Use: connect, start [alt] [mode], stop, control, status, disconnect, quit")
                 
         except EOFError:
             break

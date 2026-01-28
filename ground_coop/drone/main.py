@@ -147,8 +147,9 @@ class DroneServer:
     
     def _handle_start(self, msg):
         altitude = msg.payload.get("altitude", self.flight_config.get("default_altitude", 3.0))
+        mode = msg.payload.get("mode", "GUIDED").upper()
         
-        self.logger.info(f"Starting: altitude={altitude}m")
+        self.logger.info(f"Starting: altitude={altitude}m, mode={mode}")
         
         if not self.flight.vehicle:
             if not self.flight.connect():
@@ -159,10 +160,17 @@ class DroneServer:
             self._send_status(state=self.flight.state.value)
             return
         
-        if self.flight.takeoff(altitude):
-            self._send_status(state="hovering")
+        if mode in ["STABILIZE", "HOLD", "ALT_HOLD"]:
+            self.logger.info(f"Mode {mode}: skipping GPS check for indoor flight")
+            if self.flight.takeoff(altitude, require_gps=False):
+                self._send_status(state="hovering")
+            else:
+                self._send_error("TAKEOFF_FAILED", "Takeoff failed")
         else:
-            self._send_error("TAKEOFF_FAILED", "Takeoff failed")
+            if self.flight.takeoff(altitude, require_gps=True):
+                self._send_status(state="hovering")
+            else:
+                self._send_error("TAKEOFF_FAILED", "Takeoff failed")
     
     def _handle_stop(self):
         self.logger.info("Stopping...")
