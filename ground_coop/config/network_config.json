@@ -1,0 +1,84 @@
+{
+    "wifi_profiles": {
+        "2楼": {
+            "pc": {
+                "ip": "192.168.55.126",
+                "ports": {
+                    "from_drone": 5100,
+                    "from_dog": 5101
+                }
+            },
+            "drone": {
+                "ip": "192.168.55.128",
+                "ports": {
+                    "from_pc": 5200,
+                    "to_dog": 5300
+                }
+            },
+            "dog": {
+                "ip": "192.168.55.127",
+                "port": 5400
+            }
+        },
+        "Undefined": {
+            "pc": {
+                "ip": "X.X.X.X",
+                "ports": {
+                    "from_drone": 5100,
+                    "from_dog": 5101
+                }
+            },
+            "drone": {
+                "ip": "X.X.X.X",
+                "ports": {
+                    "from_pc": 5200,
+                    "to_dog": 5300
+                }
+            },
+            "dog": {
+                "ip": "X.X.X.X",
+                "port": 5400
+            }
+        },
+        "i-HDU": {
+            "pc": {
+                "ip": "X.X.X.X",
+                "ports": {
+                    "from_drone": 5100,
+                    "from_dog": 5101
+                }
+            },
+            "drone": {
+                "ip": "X.X.X.X",
+                "ports": {
+                    "from_pc": 5200,
+                    "to_dog": 5300
+                }
+            },
+            "dog": {
+                "ip": "X.X.X.X",
+                "port": 5400
+            }
+        }
+    },
+    "heartbeat": {
+        "interval": 10,
+        "timeout": 30
+    },
+    "flight": {
+        "default_altitude": 3.0,
+        "return_altitude": 5.0
+    },
+    "control": {
+        "move_interval": 10,
+        "move_angle_min": 0,
+        "move_angle_max": 360,
+        "move_duration_min": 0,
+        "move_duration_max": 10
+    },
+    "default_wifi": "2楼",
+    "log": {
+        "file_path": "/tmp/ground_coop.log",
+        "level": "INFO"
+    }
+}

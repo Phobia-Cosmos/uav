@@ -15,6 +15,10 @@ WIFI_2_NAME="Undefined"
 WIFI_2_PASSWORD="lzh200341.."
 WIFI_2_BSSID="36:C0:AA:ED:FC:62"
 
+WIFI_3_NAME="2楼"
+WIFI_3_PASSWORD="q1w2e3r4t5."
+WIFI_3_BSSID=""
+
 # PC IP地址（状态回传）
 PC_IP="192.168.1.50"
 PC_PORT="5001"
@@ -61,7 +65,7 @@ connect_wifi_nmcli() {
     if ! network_exists "$ssid"; then
         log "错误: 未找到网络 '$ssid'"
         log "请确保WiFi已开启，然后在信号范围内"
-        log "输入 3 扫描查看可用网络"
+        log "输入 4 扫描查看可用网络"
         return 1
     fi
 
@@ -75,7 +79,7 @@ connect_wifi_nmcli() {
         if [ -n "$bssid" ]; then
             sudo nmcli device wifi connect "$bssid" 2>&1
         else
-            sudo nmcli device wifi connect -- "$ssid" 2>&1
+            sudo nmcli device wifi connect "$ssid" 2>&1
         fi
     else
         # WPA/WPA2/WPA3网络
@@ -83,7 +87,7 @@ connect_wifi_nmcli() {
         if [ -n "$bssid" ]; then
             sudo nmcli device wifi connect "$bssid" password "$password" 2>&1
         else
-            sudo nmcli device wifi connect -- "$ssid" password "$password" 2>&1
+            sudo nmcli device wifi connect "$ssid" password "$password" 2>&1
         fi
     fi
 
@@ -94,8 +98,10 @@ connect_wifi_nmcli() {
 
     if [ "$connected_ssid" = "$ssid" ]; then
         log "连接成功!"
+        return 0
     else
-        log "当前连接: $connected_ssid"
+        log "连接失败，当前连接: $connected_ssid"
+        return 1
     fi
 
     # 获取IP地址
@@ -143,9 +149,9 @@ setup_autostart() {
     local script_path="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
     local service_file="/etc/systemd/system/wifi-connect.service"
 
-    log "设置开机自启..."
+    log "设置开机自动连接WiFi..."
 
-    # 创建systemd服务
+    # 创建systemd服务（自动连接模式）
     cat > "$service_file" << EOF
 [Unit]
 Description=WiFi Auto Connect Service
@@ -154,7 +160,7 @@ Wants=network.target
 
 [Service]
 Type=oneshot
-ExecStart=$script_path connect 1
+ExecStart=$script_path --auto
 RemainAfterExit=yes
 StandardOutput=journal
 StandardError=journal
@@ -168,6 +174,7 @@ EOF
     systemctl enable wifi-connect.service
 
     log "已创建systemd服务: $service_file"
+    log "系统将在启动时自动尝试连接WiFi"
 }
 
 remove_autostart() {
@@ -208,6 +215,34 @@ get_current_ip() {
     fi
 }
 
+auto_connect() {
+    log "自动尝试连接可用WiFi..."
+    log "按 Ctrl+C 中断"
+    
+    local wifi_list=(
+        "$WIFI_1_NAME:$WIFI_1_PASSWORD:$WIFI_1_BSSID"
+        "$WIFI_2_NAME:$WIFI_2_PASSWORD:$WIFI_2_BSSID"
+        "$WIFI_3_NAME:$WIFI_3_PASSWORD:$WIFI_3_BSSID"
+    )
+    
+    for wifi_info in "${wifi_list[@]}"; do
+        IFS=':' read -r ssid password bssid <<< "$wifi_info"
+        
+        log "尝试连接: $ssid"
+        
+        if connect_wifi_nmcli "$ssid" "$password" "$bssid"; then
+            log "自动连接成功!"
+            return 0
+        fi
+        
+        log "$ssid 连接失败，尝试下一个..."
+        sleep 2
+    done
+    
+    log "所有WiFi连接失败"
+    return 1
+}
+
 show_menu() {
     echo ""
     echo "================================"
@@ -216,14 +251,44 @@ show_menu() {
     echo "可用网络:"
     echo "  1. $WIFI_1_NAME (无密码，可能需要认证)"
     echo "  2. $WIFI_2_NAME (个人热点)"
-    echo "  3. 扫描并显示可用网络"
-    echo "  4. 查看当前IP"
-    echo "  5. 断开连接"
-    echo "  6. 设置开机自启"
-    echo "  7. 取消开机自启"
+    echo "  3. $WIFI_3_NAME"
+    echo "  4. 扫描并显示可用网络"
+    echo "  5. 查看当前IP"
+    echo "  6. 断开连接"
+    echo "  7. 自动连接（依次尝试所有WiFi）"
+    echo "  8. 设置开机自动连接"
+    echo "  9. 取消开机自动连接"
     echo "  0. 退出"
     echo "================================"
-    echo -n "请选择 [0-7]: "
+    echo -n "请选择 [0-9]: "
+}
+
+auto_connect() {
+    log "自动尝试连接可用WiFi..."
+    log "按 Ctrl+C 中断"
+    
+    local wifi_list=(
+        "$WIFI_1_NAME:$WIFI_1_PASSWORD:$WIFI_1_BSSID"
+        "$WIFI_2_NAME:$WIFI_2_PASSWORD:$WIFI_2_BSSID"
+        "$WIFI_3_NAME:$WIFI_3_PASSWORD:$WIFI_3_BSSID"
+    )
+    
+    for wifi_info in "${wifi_list[@]}"; do
+        IFS=':' read -r ssid password bssid <<< "$wifi_info"
+        
+        log "尝试连接: $ssid"
+        
+        if connect_wifi_nmcli "$ssid" "$password" "$bssid"; then
+            log "自动连接成功!"
+            return 0
+        fi
+        
+        log "$ssid 连接失败，尝试下一个..."
+        sleep 2
+    done
+    
+    log "所有WiFi连接失败"
+    return 1
 }
 
 main() {
@@ -246,23 +311,6 @@ main() {
 
     # 处理参数
     case "${1:-}" in
-        connect|--connect|-c)
-            local target="${2:-1}"
-            case "$target" in
-                1)
-                    connect_wifi_nmcli "$WIFI_1_NAME" "$WIFI_1_PASSWORD" "$WIFI_1_BSSID"
-                    ;;
-                2)
-                    connect_wifi_nmcli "$WIFI_2_NAME" "$WIFI_2_PASSWORD" "$WIFI_2_BSSID"
-                    ;;
-                *)
-                    echo "用法: $0 connect [1|2]"
-                    echo "  1: 连接i-HDU"
-                    echo "  2: 连接Undefined"
-                    ;;
-            esac
-            exit $?
-            ;;
         --scan|-s)
             scan_networks
             exit 0
@@ -276,6 +324,10 @@ main() {
             log "已断开连接"
             exit 0
             ;;
+        --auto)
+            auto_connect
+            exit $?
+            ;;
         --autostart)
             setup_autostart
             exit 0
@@ -283,6 +335,18 @@ main() {
         --remove-autostart)
             remove_autostart
             exit 0
+            ;;
+        *)
+            # 旧参数兼容
+            if [ -n "$1" ]; then
+                case "$1" in
+                    1) connect_wifi_nmcli "$WIFI_1_NAME" "$WIFI_1_PASSWORD" "$WIFI_1_BSSID" ;;
+                    2) connect_wifi_nmcli "$WIFI_2_NAME" "$WIFI_2_PASSWORD" "$WIFI_2_BSSID" ;;
+                    3) connect_wifi_nmcli "$WIFI_3_NAME" "$WIFI_3_PASSWORD" "$WIFI_3_BSSID" ;;
+                    *) echo "未知参数: $1" ;;
+                esac
+                exit $?
+            fi
             ;;
     esac
 
@@ -299,19 +363,25 @@ main() {
                 connect_wifi_nmcli "$WIFI_2_NAME" "$WIFI_2_PASSWORD" "$WIFI_2_BSSID"
                 ;;
             3)
-                scan_networks
+                connect_wifi_nmcli "$WIFI_3_NAME" "$WIFI_3_PASSWORD" "$WIFI_3_BSSID"
                 ;;
             4)
-                get_current_ip
+                scan_networks
                 ;;
             5)
+                get_current_ip
+                ;;
+            6)
                 disconnect_all "$WIFI_IFACE"
                 log "已断开连接"
                 ;;
-            6)
+            7)
+                auto_connect
+                ;;
+            8)
                 setup_autostart
                 ;;
-            7)
+            9)
                 remove_autostart
                 ;;
             0)

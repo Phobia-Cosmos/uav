@@ -1,0 +1,14 @@
+# Ground-Air Cooperation System Dependencies
+
+# Core dependencies
+dronekit>=2.9.0
+pymavlink>=2.4.0
+pyserial>=3.5
+
+# Optional: systemd logging (for Linux with systemd)
+# systemd-python>=232
+
+# For ROS integration (machine dog only)
+# rospy
+# std_msgs
+# geometry_msgs
