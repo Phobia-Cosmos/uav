@@ -267,9 +267,14 @@ class DroneServer:
             self.logger.warning("Test filename is empty")
             return
         
-        self.logger.info(f"Running test: {filename}.py")
+        if filename.endswith('.py'):
+            script_path = filename
+        elif filename.startswith('/'):
+            script_path = f"{filename}.py"
+        else:
+            script_path = f"/home/orangepi/Desktop/uav/ground_coop/{filename}.py"
         
-        script_path = f"/home/orangepi/Desktop/uav/ground_coop/{filename}.py"
+        self.logger.info(f"Running test: {script_path}")
         
         try:
             result = subprocess.run(
@@ -280,14 +285,14 @@ class DroneServer:
             )
             
             if result.returncode == 0:
-                self.logger.info(f"Test {filename} completed successfully")
+                self.logger.info(f"Test completed successfully")
             else:
-                self.logger.error(f"Test {filename} failed: {result.stderr}")
+                self.logger.error(f"Test failed: {result.stderr}")
                 
         except subprocess.TimeoutExpired:
-            self.logger.error(f"Test {filename} timed out")
+            self.logger.error(f"Test timed out")
         except Exception as e:
-            self.logger.error(f"Test {filename} error: {e}")
+            self.logger.error(f"Test error: {e}")
     
     def _send_response(self, response):
         if self.pc_connection:

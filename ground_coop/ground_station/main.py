@@ -260,8 +260,32 @@ def main():
     print("   Ground-Air Cooperation System")
     print("=" * 50)
     print("\nDrone not connected yet.")
-    print("Commands: connect, quit")
+    print("Commands: connect, help, quit")
     print("-" * 50)
+    
+    while station.running:
+        try:
+            cmd = input("\n> ").strip().lower()
+            
+            if not cmd:
+                continue
+            
+            parts = cmd.split()
+            action = parts[0]
+            
+            if action == "connect":
+                station.connect_to_drone()
+            elif action == "help":
+                print("\n=== Commands ===")
+                print("  connect              - Connect to drone")
+                print("  disconnect           - Disconnect from drone")
+                print("  start [alt] [mode]   - Takeoff (alt: meters, mode: GUIDED/STABILIZE/HOLD/ALT_HOLD)")
+                print("  stop                 - Land and disarm")
+                print("  control              - Enter control mode (drone controls dog)")
+                print("  status               - Show drone status")
+                print("  test <filename>      - Run test script on drone (absolute path or relative)")
+                print("  quit                 - Exit program")
+                print("")
     
     while station.running:
         try:
@@ -312,13 +336,23 @@ def main():
                 else:
                     if len(parts) < 2:
                         print("\nUsage: test <filename>")
-                        print("  Example: test noGPS")
+                        print("  Example: test /home/orangepi/Desktop/uav/noGPS")
+                        print("  Example: test noGPS (relative to ground_coop dir)")
                     else:
                         test_file = parts[1]
-                        if test_file.endswith('.py'):
-                            test_file = test_file[:-3]
                         station.send_test(test_file)
-                        print(f"\nRunning test: {test_file}.py")
+                        print(f"\nRunning test: {test_file}")
+            elif action == "help":
+                print("\n=== Commands ===")
+                print("  connect              - Connect to drone")
+                print("  disconnect           - Disconnect from drone")
+                print("  start [alt] [mode]   - Takeoff (alt: meters, mode: GUIDED/STABILIZE/HOLD/ALT_HOLD)")
+                print("  stop                 - Land and disarm")
+                print("  control              - Enter control mode (drone controls dog)")
+                print("  status               - Show drone status")
+                print("  test <filename>      - Run test script on drone (absolute path or relative to ground_coop)")
+                print("  quit                 - Exit program")
+                print("")
             elif action == "quit":
                 print("Quitting...")
                 break
