@@ -96,7 +96,12 @@ class GroundStation:
         if self.drone_client:
             self.drone_client.disconnect()
         
-        self.drone_client = TCPClient(host=self.drone_ip, port=self.drone_connect_port)
+        self.drone_client = TCPClient(
+            host=self.drone_ip, 
+            port=self.drone_connect_port,
+            reconnect_interval=5.0,
+            max_reconnect_attempts=0
+        )
         self.drone_client.set_callbacks(
             on_connected=self._on_drone_connected,
             on_disconnected=self._on_drone_disconnected,

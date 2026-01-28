@@ -175,10 +175,12 @@ class TCPClient:
                     
             except socket.timeout:
                 continue
-            except Exception:
+            except Exception as e:
+                if self._running:
+                    pass
                 break
         
-        if self._running:
+        if self._running and self._state == ConnectionState.CONNECTED:
             self._handle_disconnect()
 
     def _handle_disconnect(self):
