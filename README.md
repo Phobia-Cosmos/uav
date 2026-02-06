@@ -63,14 +63,13 @@ uav/
 │   ├── distance.py           # 超声波测距
 │   ├── lati_hold_fly.py      # 纬度保持飞行
 │   ├── example1.py           # 示例代码
-│   └── a.py                 # 旧代码
+│   ├── a.py                 # 旧代码
+│   └── data/                 # 模拟数据（暂时不需要，可丢弃）
+│       └── simulate.py
 │
 ├── logs/                      # 日志文件
 │   ├── mav.tlog              # MAVLink日志
 │   └── mav.tlog.raw          # MAVLink原始日志
-│
-├── data/                      # 数据文件
-│   └── simulate.py            # 模拟数据
 │
 ├── requirements.txt           # Python依赖
 └── .gitignore                # Git忽略配置
