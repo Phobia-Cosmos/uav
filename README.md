@@ -30,8 +30,7 @@ uav/
 ├── tests/                     # 测试代码
 │   ├── flight_test.py         # 飞行测试
 │   ├── mavlink_test.py        # MAVLink测试
-│   ├── sitl_control.py        # SITL仿真控制
-│   ├── ahrs_diagnostics.py   # AHRS诊断
+│   ├── ahrs_diagnostics.py    # AHRS诊断
 │   ├── pix6_controller.py     # PIX6飞控
 │   ├── pix6_diagnostics.py    # PIX6诊断
 │   └── uav_test.py            # UAV综合测试
@@ -39,8 +38,6 @@ uav/
 ├── scripts/                   # 脚本
 │   ├── wifi_connect.sh        # WiFi自动连接
 │   ├── ubuntu_wifi_connect.sh # Ubuntu WiFi连接
-│   ├── sitl_start.sh          # SITL启动
-│   ├── sitl_quick_start.sh   # SITL快速启动
 │   ├── uav_test.sh           # UAV测试脚本
 │   └── run.sh                # 运行脚本
 │
@@ -67,10 +64,6 @@ uav/
 │   └── data/                 # 模拟数据（暂时不需要，可丢弃）
 │       └── simulate.py
 │
-├── logs/                      # 日志文件
-│   ├── mav.tlog              # MAVLink日志
-│   └── mav.tlog.raw          # MAVLink原始日志
-│
 ├── requirements.txt           # Python依赖
 └── .gitignore                # Git忽略配置
 ```
@@ -81,11 +74,8 @@ uav/
 # 1. 安装依赖
 pip install -r requirements.txt
 
-# 2. 启动SITL仿真
-python3 scripts/sitl_start.sh
-
-# 3. 运行测试
-python3 tests/flight_test.py --mode arm_test
+# 2. 运行测试
+python3 tests/flight_test.py --auto
 ```
 
 ## 通信架构
