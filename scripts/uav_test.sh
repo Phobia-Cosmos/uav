@@ -68,6 +68,7 @@ except:
     exit 0
 }
 
+# TODO:这个trap的功能是什么?
 trap cleanup EXIT INT TERM
 
 # 连接飞控
@@ -238,6 +239,7 @@ print('SUCCESS')
     fi
 }
 
+# TODO:读取要测数据要的是全部的数据 并现将获取到的数据记录到一个文件中 然后再在opencode中直接对其解释.
 # 测试4: 遥测数据
 test_telemetry() {
     echo ""
@@ -279,6 +281,7 @@ print('SUCCESS')
     fi
 }
 
+# TODO:除了v.simple_takeoff(target_alt)可以起飞以外,还有哪些方式可以让飞机起飞?
 # 测试5: 起飞到10米
 test_takeoff() {
     echo ""
@@ -344,6 +347,7 @@ print('SUCCESS')
     fi
 }
 
+# TODO:current = v.location.global_relative_frame这个当前位置中都包含哪些数据,请你全部帮我罗列出来;v.simple_goto(target, groundspeed=5)这个和simple起飞有和区别,还有哪些复杂的控制运动的函数?
 # 测试6: 绕圈飞行
 test_circle() {
     echo ""

@@ -1,2 +1,12 @@
 __pycache__/
 *.pyc
+*.pyo
+*.swp
+*.swo
+.DS_Store
+*.log
+*.tlog
+*.tlog.raw
+.venv/
+venv/
+.env
