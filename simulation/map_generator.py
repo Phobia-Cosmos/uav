@@ -9,8 +9,9 @@ Map Generator
 
 import json
 import random
-from typing import Dict, List, Tuple, Any
-from dataclasses import dataclass, asdict
+import math
+from typing import Dict, List, Tuple, Any, Optional
+from dataclasses import dataclass, asdict, field
 
 
 @dataclass
@@ -46,25 +47,38 @@ class Point3D:
 class Obstacle2D:
     """2D 障碍物 (机器狗)"""
     id: str
-    type: str  # "rectangle" or "circle"
+    type: str  # "rectangle", "circle", or "wall"
     position: Point2D
-    size: Dict[str, float]  # {"width": x, "height": y} 或 {"radius": r}
+    size: Dict[str, float]  # {"width": x, "height": y} 或 {"radius": r} 或 {"width": w}
+    end_point: Optional[Point2D] = field(default=None)
 
     def to_dict(self) -> Dict:
-        return {
+        result = {
             "id": self.id,
             "type": self.type,
             "position": self.position.to_dict(),
             "size": self.size
         }
+        if self.end_point:
+            result["end_point"] = self.end_point.to_dict()
+        return result
 
     @classmethod
     def from_dict(cls, data: Dict) -> 'Obstacle2D':
+        if data["type"] == "wall":
+            position = Point2D.from_dict(data["start_point"])
+            end_point = Point2D.from_dict(data["end_point"])
+            size = {"width": data.get("width", 1)}
+        else:
+            position = Point2D.from_dict(data["position"])
+            end_point = None
+            size = data["size"]
         return cls(
             id=data["id"],
             type=data["type"],
-            position=Point2D.from_dict(data["position"]),
-            size=data["size"]
+            position=position,
+            size=size,
+            end_point=end_point
         )
 
     def contains(self, point: Tuple[float, float]) -> bool:
@@ -80,7 +94,33 @@ class Obstacle2D:
         elif self.type == "circle":
             radius = self.size["radius"]
             return ((px - ox)**2 + (py - oy)**2 <= radius**2)
+        elif self.type == "wall":
+            if self.end_point is None:
+                return False
+            return self._point_to_segment_distance(px, py) <= self.size.get("width", 1) / 2
         return False
+
+    def _point_to_segment_distance(self, px: float, py: float) -> float:
+        """计算点到线段的距离"""
+        if self.end_point is None:
+            return float('inf')
+        x1 = self.position.x
+        y1 = self.position.y
+        x2 = self.end_point.x
+        y2 = self.end_point.y
+        
+        dx = x2 - x1
+        dy = y2 - y1
+        length_sq = dx * dx + dy * dy
+        
+        if length_sq == 0:
+            return math.sqrt((px - x1)**2 + (py - y1)**2)
+        
+        t = max(0, min(1, ((px - x1) * dx + (py - y1) * dy) / length_sq))
+        closest_x = x1 + t * dx
+        closest_y = y1 + t * dy
+        
+        return math.sqrt((px - closest_x)**2 + (py - closest_y)**2)
 
 
 @dataclass

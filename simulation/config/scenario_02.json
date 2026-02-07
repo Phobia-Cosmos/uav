@@ -1,0 +1,121 @@
+{
+  "name": "Ground-Air Cooperation Rescue Scenario 02",
+  "description": "Dog and UAV each see 2D maps from their own perspectives",
+  "map_size": {
+    "x": 50,
+    "y": 50
+  },
+  "dog_map": {
+    "start": {"x": 0, "y": 0},
+    "goal": {"x": 40, "y": 40},
+    "obstacles": [
+      {
+        "id": "wall_01",
+        "type": "wall",
+        "start_point": {"x": 15, "y": 0},
+        "end_point": {"x": 15, "y": 25},
+        "width": 1
+      },
+      {
+        "id": "wall_02",
+        "type": "wall",
+        "start_point": {"x": 15, "y": 35},
+        "end_point": {"x": 15, "y": 50},
+        "width": 1
+      },
+      {
+        "id": "wall_03",
+        "type": "wall",
+        "start_point": {"x": 30, "y": 10},
+        "end_point": {"x": 30, "y": 40},
+        "width": 1
+      },
+      {
+        "id": "building_01",
+        "type": "rectangle",
+        "position": {"x": 5, "y": 30},
+        "size": {"width": 6, "height": 8}
+      },
+      {
+        "id": "building_02",
+        "type": "rectangle",
+        "position": {"x": 40, "y": 20},
+        "size": {"width": 8, "height": 6}
+      },
+      {
+        "id": "rock_01",
+        "type": "circle",
+        "position": {"x": 22, "y": 45},
+        "size": {"radius": 2}
+      },
+      {
+        "id": "rock_02",
+        "type": "circle",
+        "position": {"x": 35, "y": 5},
+        "size": {"radius": 1.5}
+      }
+    ]
+  },
+  "uav_map": {
+    "start": {"x": 0, "y": 0},
+    "goal": {"x": 40, "y": 40},
+    "obstacles": [
+      {
+        "id": "wall_01",
+        "type": "wall",
+        "start_point": {"x": 15, "y": 0},
+        "end_point": {"x": 15, "y": 20},
+        "width": 1
+      },
+      {
+        "id": "wall_02",
+        "type": "wall",
+        "start_point": {"x": 15, "y": 30},
+        "end_point": {"x": 15, "y": 50},
+        "width": 1
+      },
+      {"id": "wall_03",
+        "type": "wall",
+        "start_point": {"x": 30, "y": 5},
+        "end_point": {"x": 30, "y": 50},
+        "width": 1
+      },
+      {
+        "id": "tall_building",
+        "type": "rectangle",
+        "position": {"x": 5, "y": 30},
+        "size": {"width": 6, "height": 8}
+      },
+      {
+        "id": "tall_building_02",
+        "type": "rectangle",
+        "position": {"x": 40, "y": 20},
+        "size": {"width": 8, "height": 6}
+      },
+      {
+        "id": "debris_01",
+        "type": "circle",
+        "position": {"x": 22, "y": 45},
+        "size": {"radius": 2}
+      },
+      {
+        "id": "debris_02",
+        "type": "circle",
+        "position": {"x": 8, "y": 15},
+        "size": {"radius": 3}
+      },
+      {
+        "id": "tree_01",
+        "type": "circle",
+        "position": {"x": 25, "y": 25},
+        "size": {"radius": 2.5}
+      },
+      {
+        "id": "tree_02",
+        "type": "circle",
+        "position": {"x": 35, "y": 5},
+        "size": {"radius": 1.5}
+      }
+    ]
+  }
+}
