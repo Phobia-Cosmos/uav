@@ -1,0 +1,95 @@
+{
+  "name": "Scenario A: Maze with Dead Ends",
+  "description": "Complex maze with multiple paths, some leading to dead ends. Good for testing algorithm's ability to find truly optimal path.",
+  "map_size": {"x": 60, "y": 60},
+  "start": {"x": 5, "y": 5},
+  "goal": {"x": 55, "y": 55},
+  "obstacles": [
+    {
+      "id": "wall_center_h_1",
+      "type": "wall",
+      "start_point": {"x": 20, "y": 0},
+      "end_point": {"x": 20, "y": 25},
+      "width": 1
+    },
+    {
+      "id": "wall_center_h_2",
+      "type": "wall",
+      "start_point": {"x": 20, "y": 35},
+      "end_point": {"x": 20, "y": 60},
+      "width": 1
+    },
+    {
+      "id": "wall_middle",
+      "type": "wall",
+      "start_point": {"x": 35, "y": 10},
+      "end_point": {"x": 35, "y": 50},
+      "width": 1
+    },
+    {
+      "id": "wall_bottom_h",
+      "type": "wall",
+      "start_point": {"x": 0, "y": 45},
+      "end_point": {"x": 50, "y": 45},
+      "width": 1
+    },
+    {
+      "id": "dead_end_1",
+      "type": "wall",
+      "start_point": {"x": 45, "y": 45},
+      "end_point": {"x": 45, "y": 60},
+      "width": 1
+    },
+    {
+      "id": "dead_end_2",
+      "type": "wall",
+      "start_point": {"x": 50, "y": 25},
+      "end_point": {"x": 60, "y": 25},
+      "width": 1
+    },
+    {
+      "id": "building_1",
+      "type": "rectangle",
+      "position": {"x": 10, "y": 40},
+      "size": {"width": 6, "height": 4}
+    },
+    {
+      "id": "building_2",
+      "type": "rectangle",
+      "position": {"x": 50, "y": 10},
+      "size": {"width": 5, "height": 5}
+    },
+    {
+      "id": "narrow_passage_1",
+      "type": "wall",
+      "start_point": {"x": 0, "y": 30},
+      "end_point": {"x": 12, "y": 30},
+      "width": 1
+    },
+    {
+      "id": "debris_1",
+      "type": "circle",
+      "position": {"x": 28, "y": 55},
+      "size": {"radius": 2.5}
+    },
+    {
+      "id": "debris_2",
+      "type": "circle",
+      "position": {"x": 40, "y": 5},
+      "size": {"radius": 1.5}
+    },
+    {
+      "id": "obstacle_1",
+      "type": "circle",
+      "position": {"x": 25, "y": 15},
+      "size": {"radius": 1.8}
+    }
+  ],
+  "analysis_notes": {
+    "num_paths": 3,
+    "dead_ends": 2,
+    "narrow_passages": 1,
+    "optimal_path": "Along the bottom edge then right",
+    "expected_length": "~70m"
+  }
+}
