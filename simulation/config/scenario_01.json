@@ -1,0 +1,60 @@
+{
+  "name": "搜救场景_01",
+  "description": "简单搜救场景，包含少量障碍物",
+  "size": {
+    "x": 50,
+    "y": 50,
+    "z": 30
+  },
+  "start": {
+    "x": 0,
+    "y": 0,
+    "z": 0
+  },
+  "goal": {
+    "x": 40,
+    "y": 40,
+    "z": 10
+  },
+  "dog_obstacles": [
+    {
+      "id": "obs_001",
+      "type": "rectangle",
+      "position": {
+        "x": 10,
+        "y": 40
+      },
+      "size": {
+        "width": 4,
+        "height": 6
+      }
+    },
+    {
+      "id": "obs_002",
+      "type": "circle",
+      "position": {
+        "x": 45,
+        "y": 5
+      },
+      "size": {
+        "radius": 3
+      }
+    }
+  ],
+  "uav_obstacles": [
+    {
+      "id": "obs_003",
+      "type": "box",
+      "position": {
+        "x": 10,
+        "y": 10,
+        "z": 15
+      },
+      "size": {
+        "length": 4,
+        "width": 4,
+        "height": 8
+      }
+    }
+  ]
+}
