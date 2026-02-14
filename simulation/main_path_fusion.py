@@ -3,8 +3,8 @@
 """
 Path Fusion Main Program
 
-路径融合主程序
-实现UAV与Dog路径规划融合，选择最优路径下发
+Path fusion implementation for UAV and Dog cooperation.
+Dog perception radius: R = min(W, H) / 2
 """
 
 import sys
@@ -12,12 +12,14 @@ import os
 import json
 import time
 import math
+import random
 from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass
 
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -25,7 +27,8 @@ from map_generator import Obstacle2D
 from algorithm.a_star import AStar
 from algorithm.perception_radius import (
     generate_dog_map,
-    calculate_perception_boundary
+    calculate_perception_boundary,
+    Point
 )
 from algorithm.path_optimizer import rdp_simplify
 from evaluation.metrics import PathMetrics
@@ -43,7 +46,8 @@ COLORS = {
     'background': '#F5F5DC',
     'boundary': '#9932CC',
     'final': '#00CC00',
-    'hidden': '#AAAAAA'
+    'hidden': '#AAAAAA',
+    'mosaic': '#CCCCCC'
 }
 
 
@@ -100,9 +104,38 @@ def draw_obstacle(ax, obs: Dict):
         ax.add_patch(polygon)
 
 
+def draw_mosaic_region(ax, center: Tuple[float, float], radius: float):
+    """Draw mosaic/hatched region to represent invisible areas"""
+    x, y = center
+    num_wedges = 24
+    
+    for i in range(num_wedges):
+        angle1 = 2 * math.pi * i / num_wedges
+        angle2 = 2 * math.pi * (i + 1) / num_wedges
+        
+        vertices = [(x, y)]
+        for angle in [angle1, angle2]:
+            px = x + radius * math.cos(angle)
+            py = y + radius * math.sin(angle)
+            vertices.append((px, py))
+        vertices.append((x, y))
+        
+        alpha = 0.1 + random.random() * 0.08
+        gray_value = 0.6 + random.random() * 0.2
+        color = str(gray_value)
+        
+        polygon = plt.Polygon(vertices, facecolor=color, 
+                             edgecolor='none', alpha=alpha, zorder=0)
+        ax.add_patch(polygon)
+    
+    circle = plt.Circle((x, y), radius, fill=False, color=COLORS['boundary'],
+                        linewidth=2.5, linestyle='--', zorder=2)
+    ax.add_patch(circle)
+
+
 def run_path_planning(obstacles: List[Dict], map_size: Tuple,
                       start: Tuple, goal: Tuple, agent_type: str) -> PathResult:
-    """运行路径规划"""
+    """Run path planning"""
     print(f"\n  [{agent_type}] Start: {start}, Goal: {goal}")
     print(f"  [{agent_type}] Obstacles: {len(obstacles)}")
 
@@ -127,11 +160,10 @@ def run_path_planning(obstacles: List[Dict], map_size: Tuple,
         return PathResult(status="failed", points=[], metrics={})
 
 
-def run_partial_planning(obstacles: List[Dict], map_size: Tuple,
-                         start: Tuple, boundary: Tuple, goal: Tuple,
-                         agent_type: str) -> PathResult:
-    """运行到边界的部分路径规划"""
-    print(f"\n  [{agent_type}] Partial planning to boundary: {boundary}")
+def run_boundary_planning(obstacles: List[Dict], map_size: Tuple,
+                         start: Tuple, boundary: Tuple, agent_type: str) -> PathResult:
+    """Plan shortest path from start to boundary point (not straight line)"""
+    print(f"\n  [{agent_type}] Planning to boundary: {boundary}")
 
     obs_objects = [Obstacle2D.from_dict(obs) for obs in obstacles]
     planner = AStar(obs_objects, map_size)
@@ -149,14 +181,14 @@ def run_partial_planning(obstacles: List[Dict], map_size: Tuple,
               f"turns: {metrics['num_turns']}")
         return PathResult(status="partial", points=result['points'], metrics=metrics,
                          boundary_point={'x': boundary[0], 'y': boundary[1]},
-                         reason="目标超出感知半径")
+                         reason="Goal outside perception radius")
     else:
-        print(f"  [{agent_type}] Partial planning failed!")
+        print(f"  [{agent_type}] Boundary planning failed!")
         return PathResult(status="failed", points=[], metrics={})
 
 
 def run_simplification(result: PathResult, agent_type: str) -> PathResult:
-    """运行路径简化"""
+    """Run path simplification"""
     if not result.points:
         return result
 
@@ -181,13 +213,7 @@ def run_simplification(result: PathResult, agent_type: str) -> PathResult:
 
 
 def fuse_paths(uav_result: PathResult, dog_result: PathResult) -> Tuple[PathResult, Dict]:
-    """
-    融合两条路径，选择最优
-
-    Returns:
-        最终路径结果
-        决策详情
-    """
+    """Fuse two paths and select optimal"""
     decision = {
         'uav_status': uav_result.status,
         'dog_status': dog_result.status,
@@ -198,7 +224,7 @@ def fuse_paths(uav_result: PathResult, dog_result: PathResult) -> Tuple[PathResu
 
     if uav_result.status != 'complete':
         decision['selected'] = 'dog'
-        decision['reason'].append("UAV规划失败，使用Dog路径")
+        decision['reason'].append("UAV planning failed, use Dog path")
         return dog_result, decision
 
     if dog_result.status == 'complete':
@@ -222,42 +248,42 @@ def fuse_paths(uav_result: PathResult, dog_result: PathResult) -> Tuple[PathResu
 
             if length_diff_pct < -5:
                 decision['selected'] = 'uav'
-                decision['reason'].append(f"UAV路径更短 {abs(length_diff_pct):.1f}%")
+                decision['reason'].append(f"UAV path shorter by {abs(length_diff_pct):.1f}%")
             elif length_diff_pct > 5:
                 decision['selected'] = 'dog'
-                decision['reason'].append(f"Dog路径更短 {length_diff_pct:.1f}%")
+                decision['reason'].append(f"Dog path shorter by {length_diff_pct:.1f}%")
             else:
                 turns_uav = uav_metrics.get('num_turns', 0)
                 turns_dog = dog_metrics.get('num_turns', 0)
 
                 if turns_uav < turns_dog:
                     decision['selected'] = 'uav'
-                    decision['reason'].append(f"UAV转弯次数更少 ({turns_uav} vs {turns_dog})")
+                    decision['reason'].append(f"UAV fewer turns ({turns_uav} vs {turns_dog})")
                 elif turns_dog < turns_uav:
                     decision['selected'] = 'dog'
-                    decision['reason'].append(f"Dog转弯次数更少 ({turns_dog} vs {turns_uav})")
+                    decision['reason'].append(f"Dog fewer turns ({turns_dog} vs {turns_uav})")
                 else:
                     smooth_uav = uav_metrics.get('smoothness', 0)
                     smooth_dog = dog_metrics.get('smoothness', 0)
 
                     if smooth_uav > smooth_dog:
                         decision['selected'] = 'uav'
-                        decision['reason'].append(f"UAV路径更平滑 ({smooth_uav:.3f} vs {smooth_dog:.3f})")
+                        decision['reason'].append(f"UAV smoother ({smooth_uav:.3f} vs {smooth_dog:.3f})")
                     else:
                         decision['selected'] = 'dog'
-                        decision['reason'].append(f"Dog路径更平滑 ({smooth_dog:.3f} vs {smooth_uav:.3f})")
+                        decision['reason'].append(f"Dog smoother ({smooth_dog:.3f} vs {smooth_uav:.3f})")
 
     elif dog_result.status == 'partial':
         decision['selected'] = 'uav'
-        decision['reason'].append("Dog只能规划到边界，选择UAV完整路径")
+        decision['reason'].append("Dog can only plan to boundary, use UAV full path")
         decision['reason'].append(dog_result.reason)
 
     else:
         decision['selected'] = 'uav'
-        decision['reason'].append("Dog规划失败，使用UAV路径")
+        decision['reason'].append("Dog planning failed, use UAV path")
 
     if not decision['reason']:
-        decision['reason'].append("使用UAV路径（默认）")
+        decision['reason'].append("Use UAV path (default)")
         decision['selected'] = 'uav'
 
     final_result = uav_result if decision['selected'] == 'uav' else dog_result
@@ -268,7 +294,7 @@ def fuse_paths(uav_result: PathResult, dog_result: PathResult) -> Tuple[PathResu
 
 def visualize_comparison(config: Dict, uav_result: PathResult, dog_result: PathResult,
                         final_result: PathResult, decision: Dict, output_path: str):
-    """可视化路径对比"""
+    """Visualize path comparison"""
     map_size = (config['map_size']['x'], config['map_size']['y'])
     start = (config['start']['x'], config['start']['y'])
     goal = (config['goal']['x'], config['goal']['y'])
@@ -289,14 +315,15 @@ def visualize_comparison(config: Dict, uav_result: PathResult, dog_result: PathR
                    label='Goal', edgecolors='black', linewidths=2)
 
     circle = plt.Circle(start, radius, fill=False, color=COLORS['boundary'],
-                        linewidth=2, linestyle='--', label=f'Perception R={radius}')
+                        linewidth=2, linestyle='--', label=f'R={radius}')
     axes[0].add_patch(circle)
 
     axes[0].set_xlim(-2, map_size[0] + 2)
     axes[0].set_ylim(-2, map_size[1] + 2)
     axes[0].set_xlabel('X (meters)', fontsize=12)
     axes[0].set_ylabel('Y (meters)', fontsize=12)
-    axes[0].set_title(f"Full Map (UAV View)\n{len(full_obstacles)} obstacles", fontsize=12, fontweight='bold')
+    axes[0].set_title(f"Full Map (UAV View)\n{len(full_obstacles)} obstacles", 
+                      fontsize=12, fontweight='bold')
     axes[0].legend(loc='upper left', fontsize=10)
     axes[0].grid(True, alpha=0.3)
     axes[0].set_aspect('equal')
@@ -304,12 +331,15 @@ def visualize_comparison(config: Dict, uav_result: PathResult, dog_result: PathR
 
     for obs in dog_obstacles:
         draw_obstacle(axes[1], obs)
+    
+    draw_mosaic_region(axes[1], start, radius)
 
     axes[1].set_xlim(-2, map_size[0] + 2)
     axes[1].set_ylim(-2, map_size[1] + 2)
     axes[1].set_xlabel('X (meters)', fontsize=12)
     axes[1].set_ylabel('Y (meters)', fontsize=12)
-    axes[1].set_title(f"Dog View (R={radius})\n{len(dog_obstacles)} obstacles visible", fontsize=12, fontweight='bold')
+    axes[1].set_title(f"Dog View (R={radius})\n{len(dog_obstacles)} obstacles visible\nGray = Unknown region", 
+                      fontsize=11, fontweight='bold')
     axes[1].legend(loc='upper left', fontsize=10)
     axes[1].grid(True, alpha=0.3)
     axes[1].set_aspect('equal')
@@ -326,22 +356,27 @@ def visualize_comparison(config: Dict, uav_result: PathResult, dog_result: PathR
         dy = [p['y'] for p in dog_result.points]
         label = f'Dog Path ({dog_result.metrics.get("path_length", "N/A")}m)'
         if dog_result.status == 'partial':
-            label += ' (Partial)'
+            label += ' (to boundary)'
         axes[2].plot(dx, dy, '-', color=COLORS['dog'], linewidth=3, alpha=0.7, label=label)
+        
+        if dog_result.boundary_point:
+            axes[2].scatter(dog_result.boundary_point['x'], dog_result.boundary_point['y'],
+                           c=COLORS['boundary'], s=200, marker='o', zorder=6,
+                           edgecolors='black', linewidths=2, label='Boundary Point')
 
     if final_result.points:
         fx = [p['x'] for p in final_result.points]
         fy = [p['y'] for p in final_result.points]
         axes[2].plot(fx, fy, '--', color=COLORS['final'], linewidth=4,
-                    label=f'Final Path ({final_result.metrics.get("path_length", "N/A")}m)')
+                    label=f'Final ({final_result.metrics.get("path_length", "N/A")}m)')
 
     axes[2].set_xlim(-2, map_size[0] + 2)
     axes[2].set_ylim(-2, map_size[1] + 2)
     axes[2].set_xlabel('X (meters)', fontsize=12)
     axes[2].set_ylabel('Y (meters)', fontsize=12)
 
-    reason_text = '\n'.join(decision.get('reason', []))
-    axes[2].set_title(f"Path Comparison\nSelected: {decision.get('selected', 'N/A').upper()}\n{reason_text}",
+    reason_text = ' | '.join(decision.get('reason', []))
+    axes[2].set_title(f"Path Comparison\nSelected: {decision.get('selected', 'N/A').upper()} | {reason_text}",
                       fontsize=11, fontweight='bold')
     axes[2].legend(loc='upper left', fontsize=10)
     axes[2].grid(True, alpha=0.3)
@@ -357,8 +392,8 @@ def visualize_comparison(config: Dict, uav_result: PathResult, dog_result: PathR
 
 
 def visualize_metrics(uav_metrics: Dict, dog_metrics: Dict, decision: Dict,
-                      output_path: str):
-    """可视化指标对比表格"""
+                    output_path: str):
+    """Visualize metrics comparison table"""
     def fmt(val, fmt_str='.3f'):
         if val is None or val == 'N/A':
             return 'N/A'
@@ -504,21 +539,23 @@ def main():
                                        start, goal, "UAV")
         uav_result = run_simplification(uav_result, "UAV")
 
-        if dog_config.get('goal_in_range', False):
+        start_point = Point(start[0], start[1])
+        goal_point = Point(goal[0], goal[1])
+        boundary_pt, goal_in_range = calculate_perception_boundary(start_point, goal_point, radius)
+
+        if goal_in_range:
             dog_result = run_path_planning(dog_config.get('obstacles', []), map_size,
-                                           start, goal, "Dog")
+                                          start, goal, "Dog")
+            dog_result = run_simplification(dog_result, "Dog")
+        elif boundary_pt:
+            dog_result = run_boundary_planning(
+                dog_config.get('obstacles', []), map_size,
+                start, (boundary_pt.x, boundary_pt.y), "Dog"
+            )
             dog_result = run_simplification(dog_result, "Dog")
         else:
-            boundary = dog_config.get('boundary_point')
-            if boundary:
-                dog_result = run_partial_planning(
-                    dog_config.get('obstacles', []), map_size,
-                    start, (boundary['x'], boundary['y']), goal, "Dog"
-                )
-                dog_result = run_simplification(dog_result, "Dog")
-            else:
-                dog_result = PathResult(status="failed", points=[], metrics={},
-                                       reason="无法计算边界点")
+            dog_result = PathResult(status="failed", points=[], metrics={},
+                                   reason="Cannot calculate boundary point")
 
         os.makedirs("output", exist_ok=True)
         os.makedirs(f"output/{scenario_id}", exist_ok=True)

@@ -14,7 +14,7 @@ UAV Path (Full Map)
   path_length: 95.3
   num_waypoints: 76
   num_turns: 25
-  computation_time_ms: 1017.938
+  computation_time_ms: 1123.287
   smoothness: 0.088
   optimality_ratio: 0.63
   efficiency_ratio: 0.63
@@ -27,11 +27,11 @@ Dog Path (Partial Map)
 --------------------------------------------------
   Status: partial
   Boundary Point: (50.00, 40.00)
-  Reason: 目标超出感知半径
+  Reason: Goal outside perception radius
   path_length: 40.0
   num_waypoints: 41
   num_turns: 0
-  computation_time_ms: 4.975
+  computation_time_ms: 5.532
   smoothness: 1
   optimality_ratio: 1.0
   efficiency_ratio: 1.0
@@ -44,14 +44,14 @@ Fusion Decision
 --------------------------------------------------
   Selected Path: UAV
   Reasons:
-    - Dog只能规划到边界，选择UAV完整路径
-    - 目标超出感知半径
+    - Dog can only plan to boundary, use UAV full path
+    - Goal outside perception radius
 
   Final Path Metrics:
     path_length: 95.3
     num_waypoints: 76
     num_turns: 25
-    computation_time_ms: 1017.938
+    computation_time_ms: 1123.287
     smoothness: 0.088
     optimality_ratio: 0.63
     efficiency_ratio: 0.63
