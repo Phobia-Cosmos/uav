@@ -14,7 +14,7 @@ UAV Path (Full Map)
   path_length: 59.11
   num_waypoints: 51
   num_turns: 18
-  computation_time_ms: 219.205
+  computation_time_ms: 173.859
   smoothness: 0.513
   optimality_ratio: 0.846
   efficiency_ratio: 0.846
@@ -31,7 +31,7 @@ Dog Path (Partial Map)
   path_length: 31.66
   num_waypoints: 31
   num_turns: 4
-  computation_time_ms: 17.996
+  computation_time_ms: 15.635
   smoothness: 0.427
   optimality_ratio: 0.948
   efficiency_ratio: 0.948
@@ -51,7 +51,7 @@ Fusion Decision
     path_length: 59.11
     num_waypoints: 51
     num_turns: 18
-    computation_time_ms: 219.205
+    computation_time_ms: 173.859
     smoothness: 0.513
     optimality_ratio: 0.846
     efficiency_ratio: 0.846

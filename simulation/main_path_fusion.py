@@ -104,32 +104,50 @@ def draw_obstacle(ax, obs: Dict):
         ax.add_patch(polygon)
 
 
-def draw_mosaic_region(ax, center: Tuple[float, float], radius: float):
-    """Draw mosaic/hatched region to represent invisible areas"""
-    x, y = center
-    num_wedges = 24
+def draw_mosaic_region(ax, center: Tuple[float, float], radius: float, map_size: Tuple[float, float]):
+    """
+    Draw mosaic/hatched region to represent invisible areas (OUTSIDE the perception radius).
+    Only the area outside the circle is drawn with mosaic pattern.
+    """
+    x_center, y_center = center
+    map_width, map_height = map_size
     
-    for i in range(num_wedges):
-        angle1 = 2 * math.pi * i / num_wedges
-        angle2 = 2 * math.pi * (i + 1) / num_wedges
+    num_segments = 48
+    
+    for i in range(num_segments):
+        angle1 = 2 * math.pi * i / num_segments
+        angle2 = 2 * math.pi * (i + 1) / num_segments
         
-        vertices = [(x, y)]
-        for angle in [angle1, angle2]:
-            px = x + radius * math.cos(angle)
-            py = y + radius * math.sin(angle)
-            vertices.append((px, py))
-        vertices.append((x, y))
+        cos1, sin1 = math.cos(angle1), math.sin(angle1)
+        cos2, sin2 = math.cos(angle2), math.sin(angle2)
         
-        alpha = 0.1 + random.random() * 0.08
-        gray_value = 0.6 + random.random() * 0.2
+        x1 = x_center + radius * cos1
+        y1 = y_center + radius * sin1
+        x2 = x_center + radius * cos2
+        y2 = y_center + radius * sin2
+        
+        mid_angle = (angle1 + angle2) / 2
+        extended_r = radius + max(map_width, map_height)
+        x_ext = x_center + extended_r * math.cos(mid_angle)
+        y_ext = y_center + extended_r * math.sin(mid_angle)
+        
+        vertices = [
+            (x1, y1),
+            (x2, y2),
+            (x_ext, y_ext)
+        ]
+        
+        gray_value = 0.75 + random.random() * 0.15
         color = str(gray_value)
+        alpha = 0.15 + random.random() * 0.1
         
-        polygon = plt.Polygon(vertices, facecolor=color, 
+        polygon = plt.Polygon(vertices, facecolor=color,
                              edgecolor='none', alpha=alpha, zorder=0)
         ax.add_patch(polygon)
     
-    circle = plt.Circle((x, y), radius, fill=False, color=COLORS['boundary'],
-                        linewidth=2.5, linestyle='--', zorder=2)
+    circle = plt.Circle((x_center, y_center), radius, fill=False, 
+                        color=COLORS['boundary'],
+                        linewidth=3, linestyle='--', zorder=2)
     ax.add_patch(circle)
 
 
@@ -332,7 +350,7 @@ def visualize_comparison(config: Dict, uav_result: PathResult, dog_result: PathR
     for obs in dog_obstacles:
         draw_obstacle(axes[1], obs)
     
-    draw_mosaic_region(axes[1], start, radius)
+    draw_mosaic_region(axes[1], start, radius, map_size)
 
     axes[1].set_xlim(-2, map_size[0] + 2)
     axes[1].set_ylim(-2, map_size[1] + 2)

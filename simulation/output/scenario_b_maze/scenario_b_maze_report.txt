@@ -11,16 +11,16 @@ Goal: (70, 40)
 --------------------------------------------------
 UAV Path (Full Map)
 --------------------------------------------------
-  path_length: 95.3
-  num_waypoints: 76
-  num_turns: 25
-  computation_time_ms: 1123.287
-  smoothness: 0.088
-  optimality_ratio: 0.63
-  efficiency_ratio: 0.63
-  regions_crossed: 15
-  simplified_length: 91.61
-  simplified_points: 8
+  path_length: 64.97
+  num_waypoints: 61
+  num_turns: 16
+  computation_time_ms: 150.106
+  smoothness: 0.477
+  optimality_ratio: 0.923
+  efficiency_ratio: 0.923
+  regions_crossed: 10
+  simplified_length: 62.31
+  simplified_points: 5
 
 --------------------------------------------------
 Dog Path (Partial Map)
@@ -31,7 +31,7 @@ Dog Path (Partial Map)
   path_length: 40.0
   num_waypoints: 41
   num_turns: 0
-  computation_time_ms: 5.532
+  computation_time_ms: 3.906
   smoothness: 1
   optimality_ratio: 1.0
   efficiency_ratio: 1.0
@@ -48,13 +48,13 @@ Fusion Decision
     - Goal outside perception radius
 
   Final Path Metrics:
-    path_length: 95.3
-    num_waypoints: 76
-    num_turns: 25
-    computation_time_ms: 1123.287
-    smoothness: 0.088
-    optimality_ratio: 0.63
-    efficiency_ratio: 0.63
-    regions_crossed: 15
-    simplified_length: 91.61
-    simplified_points: 8
+    path_length: 64.97
+    num_waypoints: 61
+    num_turns: 16
+    computation_time_ms: 150.106
+    smoothness: 0.477
+    optimality_ratio: 0.923
+    efficiency_ratio: 0.923
+    regions_crossed: 10
+    simplified_length: 62.31
+    simplified_points: 5
