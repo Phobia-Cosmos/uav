@@ -1,6 +1,4 @@
 # Visualization modules for path planning
-from .comparison import ComparisonVisualizer
-from .sensitivity_plot import SensitivityPlotter
-from .report_charts import ReportChartGenerator
+from .comparison import PathVisualizer
 
-__all__ = ['ComparisonVisualizer', 'SensitivityPlotter', 'ReportChartGenerator']
+__all__ = ['PathVisualizer']

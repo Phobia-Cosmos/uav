@@ -4,6 +4,13 @@
 Path Metrics Calculator
 
 路径评估指标计算模块。
+支持多指标评估体系：
+1. 路径长度（主要指标）
+2. 转弯次数
+3. 平滑度
+4. 穿过的区域数
+5. 计算时间
+6. 最优性比率
 """
 
 import math
@@ -157,10 +164,60 @@ class PathMetrics:
         return successful_runs / total_runs
 
     @staticmethod
+    def regions_crossed(points: List[Dict],
+                        grid_size: float = 10.0) -> int:
+        """
+        计算路径穿过的区域数（将地图划分为网格）
+
+        Args:
+            points: 路径点列表
+            grid_size: 网格大小（米）
+
+        Returns:
+            穿过的网格数量
+        """
+        if len(points) < 2:
+            return 0
+
+        visited_regions = set()
+
+        for point in points:
+            grid_x = int(point['x'] / grid_size)
+            grid_y = int(point['y'] / grid_size)
+            visited_regions.add((grid_x, grid_y))
+
+        return len(visited_regions)
+
+    @staticmethod
+    def straight_line_distance(start: Dict, goal: Dict) -> float:
+        """计算起点到终点的直线距离"""
+        dx = goal['x'] - start['x']
+        dy = goal['y'] - start['y']
+        return math.sqrt(dx * dx + dy * dy)
+
+    @staticmethod
+    def efficiency_ratio(calculated_length: float,
+                         straight_distance: float) -> float:
+        """
+        计算路径效率比率
+
+        Args:
+            calculated_length: 实际路径长度
+            straight_distance: 直线距离
+
+        Returns:
+            效率比率 (1.0 = 直线)
+        """
+        if straight_distance < 0.001:
+            return 1.0
+        return straight_distance / calculated_length
+
+    @staticmethod
     def calculate_all(path_result: Dict,
-                     start_time: float,
-                     end_time: float,
-                     theoretical_distance: float = None) -> Dict:
+                      start_time: float,
+                      end_time: float,
+                      theoretical_distance: float = None,
+                      map_size: Tuple = None) -> Dict:
         """
         计算所有指标
 
@@ -169,6 +226,7 @@ class PathMetrics:
             start_time: 开始时间
             end_time: 结束时间
             theoretical_distance: 理论最短距离
+            map_size: 地图尺寸 (width, height)
 
         Returns:
             包含所有指标的字典
@@ -181,10 +239,18 @@ class PathMetrics:
         time_ms = (end_time - start_time) * 1000
         smoothness = PathMetrics.smoothness(points)
 
+        if map_size:
+            grid_size = min(map_size) / 10
+            regions = PathMetrics.regions_crossed(points, grid_size)
+        else:
+            regions = None
+
         if theoretical_distance:
             optimality = PathMetrics.optimality_ratio(length, theoretical_distance)
+            efficiency = PathMetrics.efficiency_ratio(length, theoretical_distance)
         else:
             optimality = None
+            efficiency = None
 
         return {
             'path_length': round(length, 2),
@@ -192,8 +258,88 @@ class PathMetrics:
             'num_turns': turns,
             'computation_time_ms': round(time_ms, 3),
             'smoothness': round(smoothness, 3),
-            'optimality_ratio': round(optimality, 3) if optimality else None
+            'optimality_ratio': round(optimality, 3) if optimality else None,
+            'efficiency_ratio': round(efficiency, 3) if efficiency else None,
+            'regions_crossed': regions
         }
+
+    @staticmethod
+    def compare_paths(metrics_uav: Dict, metrics_dog: Dict) -> Dict:
+        """
+        比较两条路径的指标
+
+        Args:
+            metrics_uav: UAV路径指标
+            metrics_dog: Dog路径指标
+
+        Returns:
+            比较结果字典
+        """
+        result = {
+            'length_diff': None,
+            'length_diff_pct': None,
+            'turn_diff': None,
+            'smoothness_diff': None,
+            'time_diff': None,
+            'winner': None,
+            'reason': []
+        }
+
+        if not metrics_uav or not metrics_dog:
+            return result
+
+        length_uav = metrics_uav.get('path_length', 0)
+        length_dog = metrics_dog.get('path_length', 0)
+
+        if length_uav > 0 and length_dog > 0:
+            length_diff = length_uav - length_dog
+            result['length_diff'] = round(length_diff, 2)
+            result['length_diff_pct'] = round(100 * length_diff / length_dog, 2)
+
+            if abs(length_diff) / length_dog > 0.05:
+                if length_diff < 0:
+                    result['winner'] = 'uav'
+                    result['reason'].append(f"UAV路径更短 {-length_diff:.2f}m")
+                else:
+                    result['winner'] = 'dog'
+                    result['reason'].append(f"Dog路径更短 {length_diff:.2f}m")
+
+        turns_uav = metrics_uav.get('num_turns', 0)
+        turns_dog = metrics_dog.get('num_turns', 0)
+        result['turn_diff'] = turns_uav - turns_dog
+
+        smoothness_uav = metrics_uav.get('smoothness', 0)
+        smoothness_dog = metrics_dog.get('smoothness', 0)
+        result['smoothness_diff'] = round(smoothness_uav - smoothness_dog, 3)
+
+        time_uav = metrics_uav.get('computation_time_ms', 0)
+        time_dog = metrics_dog.get('computation_time_ms', 0)
+        result['time_diff'] = round(time_uav - time_dog, 3)
+
+        if not result['reason']:
+            if result['turn_diff'] < 0:
+                result['winner'] = 'uav'
+                result['reason'].append(f"UAV转弯次数更少 {-result['turn_diff']}次")
+            elif result['turn_diff'] > 0:
+                result['winner'] = 'dog'
+                result['reason'].append(f"Dog转弯次数更少 {result['turn_diff']}次")
+
+            if result['smoothness_diff'] > 0.05:
+                if not result['winner']:
+                    result['winner'] = 'uav'
+                result['reason'].append(f"UAV路径更平滑 {result['smoothness_diff']:.3f}")
+            elif result['smoothness_diff'] < -0.05:
+                if not result['winner']:
+                    result['winner'] = 'dog'
+                result['reason'].append(f"Dog路径更平滑 {-result['smoothness_diff']:.3f}")
+
+        if not result['winner']:
+            result['winner'] = 'tie'
+            result['reason'].append("两条路径指标相近")
+
+        result['reason'] = result['reason'] if result['reason'] else ["无法确定更优路径"]
+
+        return result
 
 
 def main():

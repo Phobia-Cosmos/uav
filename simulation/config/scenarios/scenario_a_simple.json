@@ -1,0 +1,86 @@
+{
+  "name": "Scenario A: Simple Maze",
+  "description": "Simple maze demonstrating perception radius",
+  "map_size": {"x": 60, "y": 60},
+  "start": {"x": 5, "y": 30},
+  "goal": {"x": 55, "y": 30},
+  "perception_radius": 30,
+  "obstacles": [
+    {
+      "id": "wall_left",
+      "type": "wall",
+      "start_point": {"x": 20, "y": 0},
+      "end_point": {"x": 20, "y": 40},
+      "width": 1
+    },
+    {
+      "id": "wall_left_gap",
+      "type": "wall",
+      "start_point": {"x": 20, "y": 45},
+      "end_point": {"x": 20, "y": 60},
+      "width": 1
+    },
+    {
+      "id": "wall_right_top",
+      "type": "wall",
+      "start_point": {"x": 40, "y": 25},
+      "end_point": {"x": 60, "y": 25},
+      "width": 1
+    },
+    {
+      "id": "wall_right_bottom",
+      "type": "wall",
+      "start_point": {"x": 40, "y": 50},
+      "end_point": {"x": 60, "y": 50},
+      "width": 1
+    },
+    {
+      "id": "blocker_1",
+      "type": "rectangle",
+      "position": {"x": 30, "y": 8},
+      "size": {"width": 5, "height": 5}
+    },
+    {
+      "id": "blocker_2",
+      "type": "rectangle",
+      "position": {"x": 30, "y": 52},
+      "size": {"width": 5, "height": 5}
+    },
+    {
+      "id": "blocker_3",
+      "type": "rectangle",
+      "position": {"x": 50, "y": 38},
+      "size": {"width": 4, "height": 4}
+    },
+    {
+      "id": "debris_1",
+      "type": "circle",
+      "position": {"x": 12, "y": 50},
+      "size": {"radius": 1.5}
+    },
+    {
+      "id": "debris_2",
+      "type": "circle",
+      "position": {"x": 12, "y": 10},
+      "size": {"radius": 1.5}
+    },
+    {
+      "id": "debris_3",
+      "type": "circle",
+      "position": {"x": 55, "y": 15},
+      "size": {"radius": 2}
+    },
+    {
+      "id": "debris_4",
+      "type": "circle",
+      "position": {"x": 55, "y": 45},
+      "size": {"radius": 2}
+    },
+    {
+      "id": "debris_5",
+      "type": "circle",
+      "position": {"x": 25, "y": 30},
+      "size": {"radius": 1}
+    }
+  ]
+}

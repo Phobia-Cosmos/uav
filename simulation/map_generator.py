@@ -51,6 +51,7 @@ class Obstacle2D:
     position: Point2D
     size: Dict[str, float]  # {"width": x, "height": y} 或 {"radius": r} 或 {"width": w}
     end_point: Optional[Point2D] = field(default=None)
+    uav_passable: bool = field(default=False)
 
     def to_dict(self) -> Dict:
         result = {
@@ -61,6 +62,8 @@ class Obstacle2D:
         }
         if self.end_point:
             result["end_point"] = self.end_point.to_dict()
+        if self.uav_passable:
+            result["uav_passable"] = True
         return result
 
     @classmethod
@@ -78,7 +81,8 @@ class Obstacle2D:
             type=data["type"],
             position=position,
             size=size,
-            end_point=end_point
+            end_point=end_point,
+            uav_passable=data.get("uav_passable", False)
         )
 
     def contains(self, point: Tuple[float, float]) -> bool:

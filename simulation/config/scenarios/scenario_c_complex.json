@@ -1,0 +1,237 @@
+{
+  "name": "Scenario C: Complex Urban Environment",
+  "description": "复杂城市环境，35个障碍物，多条隐藏路径",
+  "map_size": {"x": 100, "y": 100},
+  "start": {"x": 10, "y": 50},
+  "goal": {"x": 90, "y": 50},
+  "perception_radius": 50,
+  "obstacles": [
+    {
+      "id": "wall_v1",
+      "type": "wall",
+      "start_point": {"x": 25, "y": 0},
+      "end_point": {"x": 25, "y": 35},
+      "width": 1.2
+    },
+    {
+      "id": "wall_v1_ext",
+      "type": "wall",
+      "start_point": {"x": 25, "y": 45},
+      "end_point": {"x": 25, "y": 70},
+      "width": 1.2
+    },
+    {
+      "id": "wall_v2",
+      "type": "wall",
+      "start_point": {"x": 50, "y": 20},
+      "end_point": {"x": 50, "y": 100},
+      "width": 1.2
+    },
+    {
+      "id": "wall_v3",
+      "type": "wall",
+      "start_point": {"x": 75, "y": 0},
+      "end_point": {"x": 75, "y": 45},
+      "width": 1.2
+    },
+    {
+      "id": "wall_v3_ext",
+      "type": "wall",
+      "start_point": {"x": 75, "y": 55},
+      "end_point": {"x": 75, "y": 100},
+      "width": 1.2
+    },
+    {
+      "id": "wall_h1",
+      "type": "wall",
+      "start_point": {"x": 0, "y": 25},
+      "end_point": {"x": 35, "y": 25},
+      "width": 1
+    },
+    {
+      "id": "wall_h2",
+      "type": "wall",
+      "start_point": {"x": 40, "y": 75},
+      "end_point": {"x": 100, "y": 75},
+      "width": 1
+    },
+    {
+      "id": "wall_h3",
+      "type": "wall",
+      "start_point": {"x": 55, "y": 40},
+      "end_point": {"x": 85, "y": 40},
+      "width": 1
+    },
+    {
+      "id": "wall_h4",
+      "type": "wall",
+      "start_point": {"x": 15, "y": 85},
+      "end_point": {"x": 60, "y": 85},
+      "width": 1
+    },
+    {
+      "id": "blocker_1",
+      "type": "rectangle",
+      "position": {"x": 38, "y": 15},
+      "size": {"width": 6, "height": 6}
+    },
+    {
+      "id": "blocker_2",
+      "type": "rectangle",
+      "position": {"x": 62, "y": 60},
+      "size": {"width": 8, "height": 8}
+    },
+    {
+      "id": "blocker_3",
+      "type": "rectangle",
+      "position": {"x": 85, "y": 85},
+      "size": {"width": 8, "height": 8}
+    },
+    {
+      "id": "blocker_4",
+      "type": "rectangle",
+      "position": {"x": 18, "y": 60},
+      "size": {"width": 5, "height": 5}
+    },
+    {
+      "id": "blocker_5",
+      "type": "rectangle",
+      "position": {"x": 40, "y": 90},
+      "size": {"width": 6, "height": 6}
+    },
+    {
+      "id": "blocker_6",
+      "type": "rectangle",
+      "position": {"x": 88, "y": 22},
+      "size": {"width": 6, "height": 6}
+    },
+    {
+      "id": "blocker_7",
+      "type": "rectangle",
+      "position": {"x": 55, "y": 12},
+      "size": {"width": 5, "height": 5}
+    },
+    {
+      "id": "blocker_8",
+      "type": "rectangle",
+      "position": {"x": 30, "y": 80},
+      "size": {"width": 5, "height": 5}
+    },
+    {
+      "id": "debris_1",
+      "type": "circle",
+      "position": {"x": 8, "y": 15},
+      "size": {"radius": 2}
+    },
+    {
+      "id": "debris_2",
+      "type": "circle",
+      "position": {"x": 35, "y": 5},
+      "size": {"radius": 1.5}
+    },
+    {
+      "id": "debris_3",
+      "type": "circle",
+      "position": {"x": 58, "y": 30},
+      "size": {"radius": 2}
+    },
+    {
+      "id": "debris_4",
+      "type": "circle",
+      "position": {"x": 42, "y": 55},
+      "size": {"radius": 1.5}
+    },
+    {
+      "id": "debris_5",
+      "type": "circle",
+      "position": {"x": 68, "y": 90},
+      "size": {"radius": 2}
+    },
+    {
+      "id": "debris_6",
+      "type": "circle",
+      "position": {"x": 82, "y": 70},
+      "size": {"radius": 1.5}
+    },
+    {
+      "id": "debris_7",
+      "type": "circle",
+      "position": {"x": 15, "y": 40},
+      "size": {"radius": 1}
+    },
+    {
+      "id": "debris_8",
+      "type": "circle",
+      "position": {"x": 95, "y": 58},
+      "size": {"radius": 2}
+    },
+    {
+      "id": "debris_9",
+      "type": "circle",
+      "position": {"x": 22, "y": 72},
+      "size": {"radius": 1.5}
+    },
+    {
+      "id": "debris_10",
+      "type": "circle",
+      "position": {"x": 72, "y": 48},
+      "size": {"radius": 1}
+    },
+    {
+      "id": "wall_extra_1",
+      "type": "wall",
+      "start_point": {"x": 30, "y": 45},
+      "end_point": {"x": 45, "y": 45},
+      "width": 0.8
+    },
+    {
+      "id": "wall_extra_2",
+      "type": "wall",
+      "start_point": {"x": 60, "y": 70},
+      "end_point": {"x": 72, "y": 70},
+      "width": 0.8
+    },
+    {
+      "id": "wall_extra_3",
+      "type": "wall",
+      "start_point": {"x": 5, "y": 65},
+      "end_point": {"x": 12, "y": 65},
+      "width": 0.8
+    },
+    {
+      "id": "wall_extra_4",
+      "type": "wall",
+      "start_point": {"x": 80, "y": 12},
+      "end_point": {"x": 92, "y": 12},
+      "width": 0.8
+    },
+    {
+      "id": "wall_extra_5",
+      "type": "wall",
+      "start_point": {"x": 48, "y": 88},
+      "end_point": {"x": 58, "y": 88},
+      "width": 0.8
+    },
+    {
+      "id": "wall_extra_6",
+      "type": "wall",
+      "start_point": {"x": 20, "y": 8},
+      "end_point": {"x": 28, "y": 8},
+      "width": 0.8
+    },
+    {
+      "id": "wall_extra_7",
+      "type": "wall",
+      "start_point": {"x": 65, "y": 52},
+      "end_point": {"x": 72, "y": 52},
+      "width": 0.8
+    },
+    {
+      "id": "wall_extra_8",
+      "type": "wall",
+      "start_point": {"x": 35, "y": 95},
+      "end_point": {"x": 45, "y": 95},
+      "width": 0.8
+    }
+  ]
+}

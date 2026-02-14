@@ -1,0 +1,176 @@
+{
+  "name": "Scenario B: Medium Complexity Maze",
+  "description": "中等复杂度迷宫，多条路径选择",
+  "map_size": {"x": 80, "y": 80},
+  "start": {"x": 10, "y": 40},
+  "goal": {"x": 70, "y": 40},
+  "perception_radius": 40,
+  "obstacles": [
+    {
+      "id": "wall_v1",
+      "type": "wall",
+      "start_point": {"x": 25, "y": 0},
+      "end_point": {"x": 25, "y": 55},
+      "width": 1
+    },
+    {
+      "id": "wall_v2",
+      "type": "wall",
+      "start_point": {"x": 50, "y": 25},
+      "end_point": {"x": 50, "y": 80},
+      "width": 1
+    },
+    {
+      "id": "wall_h1",
+      "type": "wall",
+      "start_point": {"x": 0, "y": 20},
+      "end_point": {"x": 35, "y": 20},
+      "width": 1
+    },
+    {
+      "id": "wall_h2",
+      "type": "wall",
+      "start_point": {"x": 40, "y": 60},
+      "end_point": {"x": 80, "y": 60},
+      "width": 1
+    },
+    {
+      "id": "wall_h3",
+      "type": "wall",
+      "start_point": {"x": 15, "y": 65},
+      "end_point": {"x": 60, "y": 65},
+      "width": 1
+    },
+    {
+      "id": "blocker_1",
+      "type": "rectangle",
+      "position": {"x": 38, "y": 35},
+      "size": {"width": 6, "height": 6}
+    },
+    {
+      "id": "blocker_2",
+      "type": "rectangle",
+      "position": {"x": 60, "y": 12},
+      "size": {"width": 8, "height": 8}
+    },
+    {
+      "id": "blocker_3",
+      "type": "rectangle",
+      "position": {"x": 65, "y": 75},
+      "size": {"width": 8, "height": 6}
+    },
+    {
+      "id": "blocker_4",
+      "type": "rectangle",
+      "position": {"x": 18, "y": 48},
+      "size": {"width": 5, "height": 5}
+    },
+    {
+      "id": "blocker_5",
+      "type": "rectangle",
+      "position": {"x": 55, "y": 42},
+      "size": {"width": 5, "height": 5}
+    },
+    {
+      "id": "blocker_6",
+      "type": "rectangle",
+      "position": {"x": 72, "y": 52},
+      "size": {"width": 6, "height": 6}
+    },
+    {
+      "id": "debris_1",
+      "type": "circle",
+      "position": {"x": 8, "y": 15},
+      "size": {"radius": 2}
+    },
+    {
+      "id": "debris_2",
+      "type": "circle",
+      "position": {"x": 35, "y": 8},
+      "size": {"radius": 1.5}
+    },
+    {
+      "id": "debris_3",
+      "type": "circle",
+      "position": {"x": 42, "y": 72},
+      "size": {"radius": 2}
+    },
+    {
+      "id": "debris_4",
+      "type": "circle",
+      "position": {"x": 58, "y": 30},
+      "size": {"radius": 1.5}
+    },
+    {
+      "id": "debris_5",
+      "type": "circle",
+      "position": {"x": 30, "y": 50},
+      "size": {"radius": 2}
+    },
+    {
+      "id": "debris_6",
+      "type": "circle",
+      "position": {"x": 68, "y": 25},
+      "size": {"radius": 1.5}
+    },
+    {
+      "id": "debris_7",
+      "type": "circle",
+      "position": {"x": 15, "y": 30},
+      "size": {"radius": 1}
+    },
+    {
+      "id": "debris_8",
+      "type": "circle",
+      "position": {"x": 75, "y": 62},
+      "size": {"radius": 2}
+    },
+    {
+      "id": "debris_9",
+      "type": "circle",
+      "position": {"x": 45, "y": 55},
+      "size": {"radius": 1.5}
+    },
+    {
+      "id": "debris_10",
+      "type": "circle",
+      "position": {"x": 22, "y": 60},
+      "size": {"radius": 1}
+    },
+    {
+      "id": "wall_extra_1",
+      "type": "wall",
+      "start_point": {"x": 30, "y": 30},
+      "end_point": {"x": 45, "y": 30},
+      "width": 0.8
+    },
+    {
+      "id": "wall_extra_2",
+      "type": "wall",
+      "start_point": {"x": 55, "y": 50},
+      "end_point": {"x": 70, "y": 50},
+      "width": 0.8
+    },
+    {
+      "id": "wall_extra_3",
+      "type": "wall",
+      "start_point": {"x": 12, "y": 72},
+      "end_point": {"x": 25, "y": 72},
+      "width": 0.8
+    },
+    {
+      "id": "wall_extra_4",
+      "type": "wall",
+      "start_point": {"x": 62, "y": 5},
+      "end_point": {"x": 75, "y": 5},
+      "width": 0.8
+    },
+    {
+      "id": "wall_extra_5",
+      "type": "wall",
+      "start_point": {"x": 5, "y": 52},
+      "end_point": {"x": 15, "y": 52},
+      "width": 0.8
+    }
+  ]
+}

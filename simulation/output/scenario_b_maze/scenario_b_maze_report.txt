@@ -1,0 +1,60 @@
+================================================================================
+UAV vs Dog Path Fusion Report
+================================================================================
+
+Scenario: Scenario B: Medium Complexity Maze
+Map Size: 80 x 80
+Perception Radius: 40m
+Start: (10, 40)
+Goal: (70, 40)
+
+--------------------------------------------------
+UAV Path (Full Map)
+--------------------------------------------------
+  path_length: 95.3
+  num_waypoints: 76
+  num_turns: 25
+  computation_time_ms: 1017.938
+  smoothness: 0.088
+  optimality_ratio: 0.63
+  efficiency_ratio: 0.63
+  regions_crossed: 15
+  simplified_length: 91.61
+  simplified_points: 8
+
+--------------------------------------------------
+Dog Path (Partial Map)
+--------------------------------------------------
+  Status: partial
+  Boundary Point: (50.00, 40.00)
+  Reason: 目标超出感知半径
+  path_length: 40.0
+  num_waypoints: 41
+  num_turns: 0
+  computation_time_ms: 4.975
+  smoothness: 1
+  optimality_ratio: 1.0
+  efficiency_ratio: 1.0
+  regions_crossed: 6
+  simplified_length: 40.0
+  simplified_points: 2
+
+--------------------------------------------------
+Fusion Decision
+--------------------------------------------------
+  Selected Path: UAV
+  Reasons:
+    - Dog只能规划到边界，选择UAV完整路径
+    - 目标超出感知半径
+
+  Final Path Metrics:
+    path_length: 95.3
+    num_waypoints: 76
+    num_turns: 25
+    computation_time_ms: 1017.938
+    smoothness: 0.088
+    optimality_ratio: 0.63
+    efficiency_ratio: 0.63
+    regions_crossed: 15
+    simplified_length: 91.61
+    simplified_points: 8

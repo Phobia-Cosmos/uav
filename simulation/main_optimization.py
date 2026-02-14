@@ -3,54 +3,53 @@
 """
 Phase 1 Optimization Main Program
 
-A* 路径规划 + RDP简化 + B样条平滑
+A* Path Planning + RDP Simplification
 """
 
 import sys
 import os
 import json
 import time
-from typing import Dict, List
+from typing import Dict
 sys.path.insert(0, os.path.dirname(__file__))
 
 from map_generator import Obstacle2D
 from algorithm.a_star import AStar
-from algorithm.path_optimizer import PathOptimizer, rdp_simplify, bspline_smooth
+from algorithm.path_optimizer import rdp_simplify
 from evaluation.metrics import PathMetrics
-from visualization.comparison import ComparisonVisualizer
+from visualization.comparison import PathVisualizer
 
 
 def load_scenario(filepath: str) -> Dict:
-    """加载场景配置"""
     with open(filepath, 'r') as f:
         return json.load(f)
 
 
 def run_path_planning(config: Dict) -> Dict:
-    """运行路径规划"""
     obstacles = [Obstacle2D.from_dict(obs) for obs in config['obstacles']]
     map_size = (config['map_size']['x'], config['map_size']['y'])
     start = (config['start']['x'], config['start']['y'])
     goal = (config['goal']['x'], config['goal']['y'])
 
     print(f"\n{'='*60}")
-    print(f"场景: {config['name']}")
+    print(f"Scenario: {config['name']}")
     print(f"{'='*60}")
-    print(f"起点: {start}, 终点: {goal}")
-    print(f"障碍物数量: {len(config['obstacles'])}")
+    print(f"Start: {start}, Goal: {goal}")
+    print(f"Obstacles: {len(config['obstacles'])}")
 
     planner = AStar(obstacles, map_size)
 
-    print("\n[运行 A* 规划...]")
+    print("\n[Running A*...]")
     start_time = time.time()
     result = planner.plan(start, goal, heuristic_method="euclidean")
     planning_time = time.time() - start_time
 
     if result:
         metrics = PathMetrics.calculate_all(result, 0, planning_time)
-        print(f"结果: {metrics['path_length']:.2f}m, {metrics['num_waypoints']} 点, 平滑度: {metrics['smoothness']:.3f}")
+        print(f"Result: {metrics['path_length']:.2f}m, {metrics['num_waypoints']} pts, "
+              f"smoothness: {metrics['smoothness']:.3f}, time: {metrics['computation_time_ms']:.1f}ms")
     else:
-        print("规划失败!")
+        print("Planning failed!")
         metrics = None
 
     return {
@@ -60,52 +59,89 @@ def run_path_planning(config: Dict) -> Dict:
     }
 
 
-def run_path_optimization(raw_result: Dict) -> Dict:
-    """运行路径优化"""
+def run_path_simplification(raw_result: Dict) -> Dict:
     if not raw_result.get('result'):
         return {}
 
     points = [(p['x'], p['y']) for p in raw_result['result']['points']]
-    optimizer = PathOptimizer(rdp_epsilon=1.5, bspline_samples=50)
-    optimized = optimizer.optimize(points)
+    simplified = rdp_simplify(points, epsilon=1.5)
 
-    print(f"\n[路径优化结果]")
-    print(f"  原始: {optimized['original']['num_points']} 点, {optimized['original']['length']:.2f}m, 平滑度: {optimized['original']['smoothness']:.3f}")
-    print(f"  简化: {optimized['simplified']['num_points']} 点, {optimized['simplified']['length']:.2f}m, 平滑度: {optimized['simplified']['smoothness']:.3f}")
-    print(f"  平滑: {optimized['smoothed']['num_points']} 点, {optimized['smoothed']['length']:.2f}m, 平滑度: {optimized['smoothed']['smoothness']:.3f}")
+    original_length = sum(((points[i][0]-points[i-1][0])**2 + (points[i][1]-points[i-1][1])**2)**0.5 
+                         for i in range(1, len(points)))
+    simplified_length = sum(((simplified[i][0]-simplified[i-1][0])**2 + 
+                             (simplified[i][1]-simplified[i-1][1])**2)**0.5 
+                            for i in range(1, len(simplified)))
 
-    return optimized
+    print(f"\n[Path Simplification Results]")
+    print(f"  Original: {len(points)} pts, {original_length:.2f}m")
+    print(f"  Simplified: {len(simplified)} pts, {simplified_length:.2f}m")
+    print(f"  Reduction: {len(points) - len(simplified)} pts ({100*(len(points)-len(simplified))/len(points):.1f}%)")
+
+    return {
+        'original': {'points': points, 'length': original_length},
+        'simplified': {'points': simplified, 'length': simplified_length}
+    }
 
 
-def generate_visualizations(raw_result: Dict, optimized: Dict):
-    """生成可视化"""
+def generate_visualizations(raw_result: Dict, simplified: Dict):
     config = raw_result['config']
     scenario_name = config['name'].split(':')[0].split()[1].lower()[:6]
 
-    visualizer = ComparisonVisualizer(config)
+    visualizer = PathVisualizer(config)
 
-    print("\n[生成可视化...]")
+    print("\n[Generating visualizations...]")
 
     visualizer.plot_scenario_map(f"output/scenarios/{scenario_name}_map.png")
 
     if raw_result.get('result'):
-        visualizer.plot_algorithm_comparison(
+        visualizer.plot_astar_path(
             raw_result['result'],
-            None,
-            f"output/algorithm_comparison/{scenario_name}_astar.png"
+            f"output/paths/{scenario_name}_astar.png"
         )
 
-    if optimized.get('original'):
-        visualizer.plot_path_optimization(
-            {'points': [{'x': p[0], 'y': p[1]} for p in optimized['original']['points']]},
-            {'points': [{'x': p[0], 'y': p[1]} for p in optimized['simplified']['points']]},
-            {'points': [{'x': p[0], 'y': p[1]} for p in optimized['smoothed']['points']]},
-            f"output/path_optimization/{scenario_name}_optimization.png"
+    if simplified.get('original'):
+        orig_pts = [{'x': p[0], 'y': p[1]} for p in simplified['original']['points']]
+        simp_pts = [{'x': p[0], 'y': p[1]} for p in simplified['simplified']['points']]
+        visualizer.plot_path_comparison(
+            {'points': orig_pts},
+            {'points': simp_pts},
+            f"output/comparison/{scenario_name}_comparison.png"
         )
+
+
+def generate_performance_chart(all_results: Dict, output_path: str):
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+
+    names = list(all_results.keys())
+
+    lengths = [all_results[s]['metrics']['path_length'] if all_results[s]['metrics'] else 0 for s in names]
+    points = [all_results[s]['metrics']['num_waypoints'] if all_results[s]['metrics'] else 0 for s in names]
+    times = [all_results[s]['metrics']['computation_time_ms'] if all_results[s]['metrics'] else 0 for s in names]
+
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+
+    axes[0].bar(names, lengths, color='#FF4500', alpha=0.8)
+    axes[0].set_ylabel('Path Length (m)')
+    axes[0].set_title('Path Length')
+
+    axes[1].bar(names, points, color='#1E90FF', alpha=0.8)
+    axes[1].set_ylabel('Number of Points')
+    axes[1].set_title('Path Complexity')
+
+    axes[2].bar(names, times, color='#32CD32', alpha=0.8)
+    axes[2].set_ylabel('Time (ms)')
+    axes[2].set_title('Computation Time')
+
+    plt.suptitle('Path Planning Performance Comparison', fontsize=14, fontweight='bold')
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150, bbox_inches='tight', facecolor='white')
+    plt.close()
+    print(f"Performance chart saved: {output_path}")
 
 
 def main():
-    """主函数"""
     base_dir = os.path.dirname(__file__)
 
     scenarios = [
@@ -115,45 +151,50 @@ def main():
     ]
 
     print("=" * 70)
-    print("Phase 1 优化: A* 路径规划 + RDP简化 + B样条平滑")
+    print("Phase 1: A* Path Planning + RDP Simplification")
     print("=" * 70)
 
-    all_results = []
+    all_results = {}
 
     for scenario_path in scenarios:
         config = load_scenario(scenario_path)
         result = run_path_planning(config)
-        optimized = run_path_optimization(result)
-        generate_visualizations(result, optimized)
-        all_results.append({
-            'name': config['name'],
+        simplified = run_path_simplification(result)
+        generate_visualizations(result, simplified)
+
+        all_results[config['name'].split(':')[0]] = {
             'metrics': result['metrics'],
-            'optimized': optimized
-        })
+            'simplified': simplified
+        }
+
+    generate_performance_chart(all_results, "output/performance.png")
 
     print("\n" + "=" * 70)
-    print("测试结果汇总")
+    print("Summary Results")
     print("=" * 70)
 
-    for r in all_results:
-        print(f"\n{r['name']}:")
-        if r['metrics']:
-            print(f"  A*: {r['metrics']['path_length']:.2f}m, {r['metrics']['num_waypoints']} 点, "
-                  f"平滑度: {r['metrics']['smoothness']:.3f}, 时间: {r['metrics']['computation_time_ms']:.1f}ms")
-        if r['optimized'].get('smoothed'):
-            opt = r['optimized']['smoothed']
-            print(f"  优化后: {opt['length']:.2f}m, {opt['num_points']} 点, 平滑度: {opt['smoothness']:.3f}")
+    for name, data in all_results.items():
+        print(f"\n{name}:")
+        if data['metrics']:
+            m = data['metrics']
+            print(f"  A*: {m['path_length']:.2f}m, {m['num_waypoints']} pts, "
+                  f"smoothness: {m['smoothness']:.3f}, time: {m['computation_time_ms']:.1f}ms")
+        if data['simplified']:
+            s = data['simplified']['simplified']
+            print(f"  Simplified: {len(s['points'])} pts")
 
     print("\n" + "=" * 70)
-    print("所有可视化已保存到 output/")
+    print("Output Files:")
+    print("  output/scenarios/    - Scenario maps")
+    print("  output/paths/        - A* path visualizations")
+    print("  output/comparison/   - Path comparison (original vs simplified)")
+    print("  output/performance.png - Performance chart")
     print("=" * 70)
 
 
 if __name__ == "__main__":
     os.makedirs("output/scenarios", exist_ok=True)
-    os.makedirs("output/algorithm_comparison", exist_ok=True)
-    os.makedirs("output/path_optimization", exist_ok=True)
-    os.makedirs("output/sensitivity_analysis", exist_ok=True)
-    os.makedirs("output/performance", exist_ok=True)
+    os.makedirs("output/paths", exist_ok=True)
+    os.makedirs("output/comparison", exist_ok=True)
 
     main()
