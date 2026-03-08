@@ -149,6 +149,7 @@ def format_semantic_name(semantic_type: str) -> str:
     mapping = {
         "crawl_under_wall": "可钻行矮墙",
         "low_wall": "可钻行矮墙",
+        "climbable_wall": "可翻越墙体",
         "swamp": "沼泽",
         "quicksand": "流沙",
         "water": "水面",
@@ -430,7 +431,7 @@ def create_fusion_figure(result: ScenarioResult, output_path: str):
 
     legend_handles = [
         mpatches.Patch(facecolor=COLORS['building'], edgecolor='#2E2723', label='Standard obstacle'),
-        mpatches.Patch(facecolor=COLORS['crawl_fill'], edgecolor=COLORS['crawl_edge'], hatch='///', label='Crawl-under wall'),
+        mpatches.Patch(facecolor=COLORS['crawl_fill'], edgecolor=COLORS['crawl_edge'], hatch='///', label='Dog-passable wall'),
         mpatches.Patch(facecolor=COLORS['swamp_fill'], edgecolor=COLORS['swamp_edge'], hatch='xx', label='Swamp / quicksand / water'),
         plt.Line2D([0], [0], color=COLORS['initial_path'], linestyle='--', label='Initial path P_0'),
         plt.Line2D([0], [0], color=COLORS['final_path'], linestyle='-', label='Final replanned path'),
@@ -508,7 +509,7 @@ def write_report(result: ScenarioResult, output_path: str):
         file.write(f"Perception Radius: {config.get('perception_radius', 12)}\n\n")
 
         file.write("=== Semantic Obstacles ===\n")
-        file.write(f"Crawl-under walls: {crawl_ids}\n")
+        file.write(f"Dog-passable walls: {crawl_ids}\n")
         file.write(f"Swamp / quicksand / water: {swamp_ids}\n\n")
 
         file.write("=== Planning Summary ===\n")
@@ -553,6 +554,7 @@ def scenario_list(base_dir: str) -> List[Tuple[str, str]]:
         ("scenario_a_simple", os.path.join(base_dir, "config/scenarios/scenario_a_simple.json")),
         ("scenario_b_maze", os.path.join(base_dir, "config/scenarios/scenario_b_maze.json")),
         ("scenario_c_complex", os.path.join(base_dir, "config/scenarios/scenario_c_complex.json")),
+        ("scenario_d_decision_complexity", os.path.join(base_dir, "config/scenarios/scenario_d_decision_complexity.json")),
     ]
 
 

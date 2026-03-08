@@ -38,7 +38,7 @@ def draw_obstacle(ax, obs: Dict):
     obs_type = obs.get('type', 'rectangle')
     semantic_type = obstacle_semantic_type(obs)
 
-    if semantic_type in {'crawl_under_wall', 'low_wall'}:
+    if semantic_type in {'crawl_under_wall', 'low_wall', 'climbable_wall'}:
         style = {
             'facecolor': COLORS['crawl_fill'],
             'edgecolor': COLORS['crawl_edge'],

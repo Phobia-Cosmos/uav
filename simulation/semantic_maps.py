@@ -17,7 +17,7 @@ from map_generator import Obstacle2D
 
 
 SWAMP_TYPES = {"swamp", "quicksand", "water"}
-CRAWL_TYPES = {"crawl_under_wall", "low_wall"}
+CRAWL_TYPES = {"crawl_under_wall", "low_wall", "climbable_wall"}
 SPECIAL_TYPES = SWAMP_TYPES | CRAWL_TYPES
 
 

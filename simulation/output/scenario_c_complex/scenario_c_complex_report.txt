@@ -6,13 +6,13 @@ Goal: (110, 45)
 Perception Radius: 14
 
 === Semantic Obstacles ===
-Crawl-under walls: ['crawl_wall_1', 'crawl_wall_2']
+Dog-passable walls: ['crawl_wall_1', 'crawl_wall_2']
 Swamp / quicksand / water: ['water_front']
 
 === Planning Summary ===
-P_0: length=106.06m, waypoints=3, turns=1, time=142.542ms, obstacles=7
-P_1: length=90.08m, waypoints=4, turns=2, time=71.169ms, obstacles=8
-P_2: length=39.56m, waypoints=2, turns=0, time=26.719ms, obstacles=7
+P_0: length=106.06m, waypoints=3, turns=1, time=130.692ms, obstacles=7
+P_1: length=90.08m, waypoints=4, turns=2, time=69.745ms, obstacles=8
+P_2: length=39.56m, waypoints=2, turns=0, time=18.645ms, obstacles=7
 
 === Trigger Events ===
 E1 @ (26.92, 41.75)

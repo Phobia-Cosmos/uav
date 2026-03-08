@@ -48,6 +48,12 @@
 | `visualization/comparison.py` | 独立场景可视化工具 |
 | `config/scenarios/*.json` | 仿真场景配置 |
 
+其中 `config/scenarios/scenario_d_decision_complexity.json` 是新增的“决策复杂度优先”场景：
+
+- 水池会被 UAV 误判为可通行地面
+- 死胡同式末端墙体里包含可翻越墙
+- 障碍数量不多，但会触发“先避水池、再识别可翻越墙”的连续决策修正
+
 ## 运行方式
 
 ```bash
