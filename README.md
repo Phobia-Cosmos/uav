@@ -1,97 +1,89 @@
-# UAV实时控制系统
+# UAV 项目目录说明
 
-> 空地协同系统 - 无人机与机器狗协调控制
-> archive/data目录下的模拟通信暂时不需要 可以后续考虑或者丢弃
+这是一个同时包含**真实设备控制**、**测试脚本**、**路径规划仿真**和**历史实验代码**的仓库。当前目录已经按“可运行主线 / 支撑配置 / 仿真研究 / 历史归档”四层来理解会最清晰。
 
-## 项目结构
+## 当前主线
 
-```
-uav/
-├── src/                        # 源代码
-│   ├── drone/                 # 无人机端
-│   │   ├── drone_server.py    # 香橙派服务端（核心）
-│   │   ├── fly.py             # 飞行控制主程序
-│   │   ├── yaw_controller.py   # 航向控制
-│   │   └── noGPS.py           # 无GPS飞行
-│   │
-│   ├── ground_station/        # PC地面站
-│   │   └── ground_station.py  # 地面站控制程序
-│   │
-│   ├── dog/                   # 机器狗端
-│   │   └── motion_adapter.py  # ROS服务适配器
-│   │
-│   └── common/                # 公共模块（保留原ground_coop/common）
-│       ├── protocol.py        # JSON消息协议
-│       ├── tcp_base.py        # TCP客户端/服务端基类
-│       ├── heartbeat.py       # 心跳检测
-│       ├── config_manager.py  # 配置管理
-│       └── logger.py          # 日志
-│
-├── tests/                     # 测试代码
-│   ├── flight_test.py         # 飞行测试
-│   ├── mavlink_test.py        # MAVLink测试
-│   ├── ahrs_diagnostics.py    # AHRS诊断
-│   ├── pix6_controller.py     # PIX6飞控
-│   ├── pix6_diagnostics.py    # PIX6诊断
-│   └── uav_test.py            # UAV综合测试
-│
-├── scripts/                   # 脚本
-│   ├── wifi_connect.sh        # WiFi自动连接
-│   ├── ubuntu_wifi_connect.sh # Ubuntu WiFi连接
-│   ├── uav_test.sh           # UAV测试脚本
-│   └── run.sh                # 运行脚本
-│
-├── config/                    # 配置文件
-│   ├── frame_config.parm      # 飞控参数
-│   ├── quad_config.parm       # 四旋翼参数
-│   ├── quad_setup.parm        # 四旋翼设置
-│   ├── mav.parm              # MAVLink参数
-│   └── network_config.json    # 网络配置
-│
-├── docs/                      # 文档
-│   ├── README.md              # 项目说明
-│   ├── PROJECT_CONTEXT.md     # 项目上下文
-│   ├── LEARNING_GUIDE.md      # 学习指南
-│   ├── FAQ.md                # 常见问题
-│   └── SITL测试指南.md        # SITL测试文档
-│
-├── archive/                   # 历史代码
-│   ├── cv2_test.py           # OpenCV测试
-│   ├── distance.py           # 超声波测距
-│   ├── lati_hold_fly.py      # 纬度保持飞行
-│   ├── example1.py           # 示例代码
-│   ├── a.py                 # 旧代码
-│   └── data/                 # 模拟数据（暂时不需要，可丢弃）
-│       └── simulate.py
-│
-├── requirements.txt           # Python依赖
-└── .gitignore                # Git忽略配置
-```
+- 真实运行主线在 `src/`：无人机端、地面站、机器狗适配器、公用通信模块都在这里。
+- 验证与诊断主线在 `tests/`：这里保留 Python 测试脚本，作为目前推荐的测试入口。
+- 环境与启动辅助在 `scripts/`：这里只放运行入口和 WiFi/部署脚本，不再放重复的飞行测试实现。
+- 路径规划研究在 `simulation/`：独立于真实飞控控制链，主要用于算法验证、场景配置和结果输出。
 
-## 快速开始
+## 顶层目录作用
+
+| 目录 | 作用 | 备注 |
+| --- | --- | --- |
+| `src/` | 项目核心源码 | 真实设备控制与通信主线 |
+| `tests/` | Python 测试与诊断 | 推荐优先从这里跑飞控验证 |
+| `scripts/` | 启动与环境脚本 | 偏运维，不承载核心业务逻辑 |
+| `config/` | 飞控参数和网络配置 | `.parm` 为参数集，`network_config.json` 为网络配置 |
+| `simulation/` | 路径规划仿真与实验输出 | 包含 2D/3D 算法、场景、评估、可视化 |
+| `docs/` | 项目文档 | 学习资料、阶段方案、FAQ、上下文 |
+| `archive/` | 历史实验代码 | 仅保留有参考价值的旧脚本 |
+
+## `src/` 子目录说明
+
+| 子目录 | 作用 | 关键文件 |
+| --- | --- | --- |
+| `src/common/` | 公共协议、TCP 封装、心跳、日志、配置管理 | `protocol.py`, `tcp_base.py`, `heartbeat.py`, `config_manager.py` |
+| `src/drone/` | 无人机端控制逻辑 | `drone_server.py`, `yaw_controller.py`, `fly.py`, `noGPS.py` |
+| `src/ground_station/` | PC 地面站控制端 | `ground_station.py` |
+| `src/dog/` | 机器狗动作适配层 | `motion_adapter.py` |
+
+## `simulation/` 子目录说明
+
+| 子目录 | 作用 |
+| --- | --- |
+| `simulation/algorithm/` | 路径规划与路径优化算法 |
+| `simulation/3d/` | 3D UAV 路径规划与可视化 |
+| `simulation/visualization/` | 2D 对比可视化 |
+| `simulation/evaluation/` | 路径指标评估 |
+| `simulation/config/` | 仿真场景配置 |
+| `simulation/output/` | 已生成的图表与报告 |
+| `simulation/docs/` | 仿真阶段的专题文档 |
+
+## 推荐入口
+
+### 真实控制
 
 ```bash
-# 1. 安装依赖
-pip install -r requirements.txt
+# 地面站
+python3 src/ground_station/ground_station.py
 
-# 2. 运行测试
-python3 tests/flight_test.py --auto
+# 无人机端服务
+python3 src/drone/drone_server.py --connection /dev/ttyACM0
 ```
 
-## 通信架构
+### 测试与诊断
 
+```bash
+# SITL/飞行流程测试
+python3 tests/flight_test.py --mode full
+
+# 综合测试入口
+python3 tests/uav_test.py --mode sitl --auto
+
+# AHRS 诊断
+python3 tests/ahrs_diagnostics.py --connection /dev/ttyACM0
 ```
-PC (192.168.55.126) ←──TCP──→ 无人机 (192.168.55.128) ←──TCP──→ 机器狗 (192.168.55.127)
 
-端口分配：
-- PC: 5100/5101
-- 无人机: 5200/5300
-- 机器狗: 5400
+### 仿真
+
+```bash
+# 路径融合主程序
+python3 simulation/main_path_fusion.py
 ```
 
-## 文档
+## 这次整理做了什么
 
-- [学习指南](docs/LEARNING_GUIDE.md) ← 推荐先读这个
-- [项目上下文](docs/PROJECT_CONTEXT.md)
-- [FAQ](docs/FAQ.md)
-- [SITL测试指南](docs/SITL测试指南.md)
+- 删除 `scripts/uav_test.sh`：与 `tests/` 下 Python 测试脚本职责重叠，维护成本高。
+- 删除 `archive/a.py`：与 `archive/lati_hold_fly.py` 高度重复，且命名无语义。
+- 删除 `archive/data/simulate.py`：仓库内已标注为“暂时不需要，可丢弃”的旧本地模拟代码。
+- 保留 `archive/` 里仍有参考价值的硬件实验脚本，避免一次性误删全部历史资料。
+
+## 阅读顺序建议
+
+1. 先看 `docs/LEARNING_GUIDE.md`
+2. 再看 `src/common/` 与 `src/drone/`
+3. 然后看 `tests/` 的诊断与飞行测试脚本
+4. 最后再看 `simulation/` 的算法实验链路

@@ -4,16 +4,17 @@
 
 ```
 uav/
-├── core/                          # 核心代码（必学）
-│   ├── drone_server.py            # 飞控连接与服务端
-│   └── ground_station.py          # PC地面站控制
-├── features/                      # 功能模块（进阶）
-│   ├── yaw_controller.py          # 航向控制
+├── src/                           # 核心源码（必学）
+│   ├── drone/drone_server.py      # 飞控连接与服务端
+│   ├── ground_station/ground_station.py
+│   └── drone/yaw_controller.py    # 航向控制
+├── tests/                         # 测试与诊断
 │   ├── flight_test.py             # 完整飞行测试
+│   ├── uav_test.py                # 综合测试套件
 │   └── ahrs_diagnostics.py        # AHRS诊断工具
-├── tools/                         # 工具脚本
-│   ├── sitl_control.py            # SITL模拟器控制
-│   └── SITL测试指南.md            # SITL使用文档
+├── scripts/                       # 启动与环境脚本
+│   └── run.sh                     # 统一启动入口
+├── simulation/                    # 路径规划仿真
 ├── archive/                       # 历史代码（参考）
 └── README.md                      # 项目说明
 ```
@@ -26,8 +27,8 @@ uav/
 
 | 顺序 | 文件 | 重点内容 | 学习目标 |
 |-----|------|---------|---------|
-| 1 | `drone_server.py` | `connect_vehicle()` | 理解如何连接飞控 |
-| 2 | `ground_station.py` | `GroundStation`类 | 理解指令发送流程 |
+| 1 | `src/drone/drone_server.py` | `connect_vehicle()` | 理解如何连接飞控 |
+| 2 | `src/ground_station/ground_station.py` | `GroundStation`类 | 理解指令发送流程 |
 
 **核心概念：**
 ```python
@@ -46,8 +47,8 @@ print(vehicle.attitude)         # 姿态数据
 
 | 顺序 | 文件 | 重点内容 | 学习目标 |
 |-----|------|---------|---------|
-| 1 | `flight_test.py` | `arm_and_takeoff()` | 掌握标准解锁流程 |
-| 2 | `drone_server.py` | `idle_test()` | 理解怠速测试 |
+| 1 | `tests/flight_test.py` | `arm_and_takeoff()` | 掌握标准解锁流程 |
+| 2 | `src/drone/drone_server.py` | `idle_test()` | 理解怠速测试 |
 
 **解锁流程：**
 ```python
@@ -71,9 +72,9 @@ vehicle.simple_takeoff(target_altitude)
 
 | 顺序 | 文件 | 重点内容 | 学习目标 |
 |-----|------|---------|---------|
-| 1 | `yaw_controller.py` | `condition_yaw` | 航向控制原理 |
-| 2 | `flight_test.py` | `send_local_ned_velocity()` | 速度控制 |
-| 3 | `drone_server.py` | `set_rc_override()` | RC覆盖控制 |
+| 1 | `src/drone/yaw_controller.py` | `condition_yaw` | 航向控制原理 |
+| 2 | `tests/flight_test.py` | 飞行流程控制 | 理解高层飞行测试逻辑 |
+| 3 | `src/drone/drone_server.py` | `set_rc_override()` | RC覆盖控制 |
 
 **关键指令：**
 ```python
@@ -99,8 +100,8 @@ msg = vehicle.message_factory.set_position_target_local_ned_encode(
 
 | 顺序 | 文件 | 重点内容 |
 |-----|------|---------|
-| 1 | `ahrs_diagnostics.py` | AHRS/IMU检查 |
-| 2 | `flight_test.py` | `arm_check()` |
+| 1 | `tests/ahrs_diagnostics.py` | AHRS/IMU检查 |
+| 2 | `tests/flight_test.py` | `arm_check()` |
 
 **诊断要点：**
 - `vehicle.is_armable` - 飞控可解锁状态
@@ -114,8 +115,8 @@ msg = vehicle.message_factory.set_position_target_local_ned_encode(
 
 | 文件 | 功能 |
 |-----|------|
-| `sitl_control.py` | SITL模拟器管理 |
-| `SITL测试指南.md` | 仿真环境搭建 |
+| `tests/uav_test.py` | 按测试项分步验证完整链路 |
+| `simulation/` | 路径规划、评估、可视化实验 |
 
 ---
 
@@ -133,25 +134,25 @@ msg = vehicle.message_factory.set_position_target_local_ned_encode(
 ## 推荐学习顺序
 
 ```
-1. 运行一次 ahrs_diagnostics.py 了解飞控状态
-2. 用 flight_test.py --mode arm_test 测试解锁
-3. 用 sitl_control.py 启动SITL仿真
-4. 逐步阅读 drone_server.py 核心代码
-5. 修改 ground_station.py 添加自定义功能
+1. 运行一次 `tests/ahrs_diagnostics.py` 了解飞控状态
+2. 用 `tests/flight_test.py --mode arm_test` 测试解锁
+3. 用 `tests/uav_test.py --mode sitl --auto` 跑综合测试
+4. 逐步阅读 `src/drone/drone_server.py` 核心代码
+5. 修改 `src/ground_station/ground_station.py` 添加自定义功能
 ```
 
 ---
 
 ## 文件说明速查
 
-| 文件 | 功能 | 代码行数 |
-|-----|------|---------|
-| `drone_server.py` | 香橙派服务端 | 685 |
-| `ground_station.py` | PC地面站 | 356 |
-| `flight_test.py` | 飞行测试 | 391 |
-| `yaw_controller.py` | 航向控制 | 275 |
-| `ahrs_diagnostics.py` | 诊断工具 | 310 |
-| `sitl_control.py` | SITL控制 | 104 |
+| 文件 | 功能 |
+|-----|------|
+| `src/drone/drone_server.py` | 香橙派服务端 |
+| `src/ground_station/ground_station.py` | PC地面站 |
+| `tests/flight_test.py` | 飞行测试 |
+| `src/drone/yaw_controller.py` | 航向控制 |
+| `tests/ahrs_diagnostics.py` | 诊断工具 |
+| `tests/uav_test.py` | 综合测试套件 |
 
 ---
 

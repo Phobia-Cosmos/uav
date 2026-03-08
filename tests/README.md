@@ -1,58 +1,41 @@
 # Tests (测试代码)
 
-> scripts目录下的测试仅限于测试阶段使用,后期的脚本是python格式,使用python控制代码飞行,当我们通过了SITL测试后即可迁移到简单的python脚本测试
->   uav/tests/flight_test.py:各个选项的功能是一样的 直接full即可
->   uav/tests/uav_test.py:其中的SITL功能是多余的;硬件pix6测试也是多余的;也可以不运行scripts目录下的测试 直接使用该脚本进行测试;
-
-各种测试脚本，用于验证飞控连接、功能测试和诊断。
+这里是当前仓库的**主测试入口**。与历史 shell 测试脚本相比，`tests/` 下的 Python 脚本更集中、可复用，也更适合作为后续维护基线。
 
 ## 文件说明
 
 | 文件 | 功能描述 |
-|-----|---------|
-| `flight_test.py` | **综合飞行测试**。SITL仿真中测试起飞→圆形飞行→悬停→返航完整流程。包含解锁检查、姿态监控、航点飞行等。 |
-| `sitl_control.py` | SITL模拟器启动脚本。自动检测SITL进程，启动ArduCopter仿真，记录日志到/tmp/sitl.log。 |
-| `mavlink_test.py` | MAVLink基础测试。连接飞控，测试起飞、速度控制、姿态控制等基本MAVLink指令。 |
-| `ahrs_diagnostics.py` | **AHRS诊断程序**。检测和解决"Bad AHRS"及无法解锁电机的问题，提供系统状态检查和解决方案。 |
-| `pix6_controller.py` | Pix6飞控无RC控制模块。禁用RC检测和保护，方便纯代码控制飞控。用于室内无遥控器环境。 |
-| `pix6_diagnostics.py` | Pix6飞控诊断工具。连接并获取所有参数和遥测数据，验证是否获取真实信息。 |
-| `uav_test.py` | **UAV完整测试套件**。先在SITL中测试，再在Pix6硬件上测试。支持自动模式和交互模式，记录测试结果。 |
+| --- | --- |
+| `flight_test.py` | SITL 飞行流程测试，覆盖起飞、圆形航迹、悬停、返航等流程。 |
+| `uav_test.py` | 综合测试套件，适合按测试项分步验证连接、模式、解锁、起飞、移动、降落、遥测。 |
+| `mavlink_test.py` | MAVLink 基础控制测试，适合验证速度、姿态、偏航等底层控制指令。 |
+| `ahrs_diagnostics.py` | AHRS / PreArm / 传感器健康诊断。 |
+| `pix6_controller.py` | Pix6 纯代码控制辅助模块，适合室内无遥控器场景。 |
+| `pix6_diagnostics.py` | Pix6 参数和遥测信息诊断脚本。 |
 
-## 运行方式
+## 推荐运行顺序
 
 ```bash
-# SITL飞行测试
-python3 tests/flight_test.py --auto
+# 1. SITL 验证主流程
+python3 tests/flight_test.py --mode full
 
-# AHRS诊断
+# 2. 分项综合测试
+python3 tests/uav_test.py --mode sitl --auto
+
+# 3. 真机出现解锁/姿态异常时诊断
 python3 tests/ahrs_diagnostics.py --connection /dev/ttyACM0
-
-# Pix6诊断
-python3 tests/pix6_diagnostics.py
-
-# 完整测试套件（SITL模式）
-python3 tests/uav_test.py --sitl --auto
-
-# 完整测试套件（Pix6硬件）
-python3 tests/uav_test.py --pix6 --auto
 ```
 
-## 测试流程 (uav_test.py)
+## 常见问题
 
-```
-1. 连接测试 → 飞控连接验证
-2. 解锁测试 → 检查是否可以解锁
-3. 起飞测试 → 起飞到指定高度
-4. 悬停测试 → 悬停指定时间
-5. 姿态测试 → 检查pitch/roll/yaw
-6. 降落测试 → 安全降落
-```
+| 问题 | 处理方式 |
+| --- | --- |
+| 无法连接飞控 | 检查连接串、波特率、串口权限 |
+| 无法解锁 | 先跑 `ahrs_diagnostics.py` 查看 PreArm / AHRS 状态 |
+| SITL 无响应 | 检查模拟器端口是否正确、是否已有旧进程占用 |
 
-## 常见问题排查
+## 说明
 
-| 问题 | 解决方案 |
-|-----|---------|
-| 无法连接飞控 | 检查USB端口、波特率、权限 |
-| Bad AHRS | 运行 `ahrs_diagnostics.py` |
-| 无法解锁 | 检查遥控器连接、飞控参数 |
-| SITL无响应 | 运行 `sitl_control.py` 重启 |
+- 旧的 shell 版飞行测试脚本已移除，避免与这里的 Python 测试逻辑重复维护。
+- 如果只想快速验证完整飞行流程，优先使用 `flight_test.py`。
+- 如果想分步骤定位问题，优先使用 `uav_test.py`。

@@ -1,86 +1,99 @@
 {
-  "name": "Scenario A: Simple Maze",
-  "description": "Simple maze demonstrating perception radius",
-  "map_size": {"x": 60, "y": 60},
-  "start": {"x": 5, "y": 30},
-  "goal": {"x": 55, "y": 30},
-  "perception_radius": 30,
+  "name": "Scenario: Urban City",
+  "description": "Urban city with complex building layout and dead-end alleys",
+  "map_size": {"x": 100, "y": 100},
+  "start": {"x": 10, "y": 50},
+  "goal": {"x": 90, "y": 50},
+  "perception_radius": 50,
   "obstacles": [
     {
-      "id": "wall_left",
+      "id": "building_1",
+      "type": "rectangle",
+      "position": {"x": 20, "y": 15},
+      "size": {"width": 10, "height": 20}
+    },
+    {
+      "id": "building_2",
+      "type": "rectangle",
+      "position": {"x": 20, "y": 55},
+      "size": {"width": 10, "height": 25}
+    },
+    {
+      "id": "wall_deadend_1",
       "type": "wall",
-      "start_point": {"x": 20, "y": 0},
-      "end_point": {"x": 20, "y": 40},
+      "start_point": {"x": 35, "y": 0},
+      "end_point": {"x": 35, "y": 35},
       "width": 1
     },
     {
-      "id": "wall_left_gap",
+      "id": "wall_deadend_2",
       "type": "wall",
-      "start_point": {"x": 20, "y": 45},
-      "end_point": {"x": 20, "y": 60},
+      "start_point": {"x": 35, "y": 45},
+      "end_point": {"x": 35, "y": 70},
       "width": 1
     },
     {
-      "id": "wall_right_top",
+      "id": "wall_deadend_3",
       "type": "wall",
-      "start_point": {"x": 40, "y": 25},
-      "end_point": {"x": 60, "y": 25},
+      "start_point": {"x": 35, "y": 80},
+      "end_point": {"x": 35, "y": 100},
       "width": 1
     },
     {
-      "id": "wall_right_bottom",
+      "id": "building_3",
+      "type": "rectangle",
+      "position": {"x": 50, "y": 30},
+      "size": {"width": 15, "height": 15}
+    },
+    {
+      "id": "wall_deadend_4",
       "type": "wall",
-      "start_point": {"x": 40, "y": 50},
-      "end_point": {"x": 60, "y": 50},
+      "start_point": {"x": 70, "y": 20},
+      "end_point": {"x": 70, "y": 55},
       "width": 1
+    },
+    {
+      "id": "wall_deadend_5",
+      "type": "wall",
+      "start_point": {"x": 70, "y": 65},
+      "end_point": {"x": 70, "y": 100},
+      "width": 1
+    },
+    {
+      "id": "building_4",
+      "type": "rectangle",
+      "position": {"x": 80, "y": 15},
+      "size": {"width": 12, "height": 25}
+    },
+    {
+      "id": "building_5",
+      "type": "rectangle",
+      "position": {"x": 80, "y": 70},
+      "size": {"width": 12, "height": 20}
     },
     {
       "id": "blocker_1",
       "type": "rectangle",
-      "position": {"x": 30, "y": 8},
-      "size": {"width": 5, "height": 5}
+      "position": {"x": 42, "y": 15},
+      "size": {"width": 4, "height": 4}
     },
     {
       "id": "blocker_2",
       "type": "rectangle",
-      "position": {"x": 30, "y": 52},
-      "size": {"width": 5, "height": 5}
-    },
-    {
-      "id": "blocker_3",
-      "type": "rectangle",
-      "position": {"x": 50, "y": 38},
+      "position": {"x": 42, "y": 80},
       "size": {"width": 4, "height": 4}
     },
     {
       "id": "debris_1",
       "type": "circle",
-      "position": {"x": 12, "y": 50},
+      "position": {"x": 55, "y": 50},
       "size": {"radius": 1.5}
     },
     {
       "id": "debris_2",
       "type": "circle",
-      "position": {"x": 12, "y": 10},
+      "position": {"x": 75, "y": 60},
       "size": {"radius": 1.5}
-    },
-    {
-      "id": "debris_3",
-      "type": "circle",
-      "position": {"x": 55, "y": 15},
-      "size": {"radius": 2}
-    },
-    {
-      "id": "debris_4",
-      "type": "circle",
-      "position": {"x": 55, "y": 45},
-      "size": {"radius": 2}
-    },
-    {
-      "id": "debris_5",
-      "type": "circle",
-      "position": {"x": 25, "y": 30},
-      "size": {"radius": 1}
     }
   ]
 }

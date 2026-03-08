@@ -2,7 +2,7 @@
 UAV vs Dog Path Fusion Report
 ================================================================================
 
-Scenario: Scenario C: Complex Urban Environment
+Scenario: Scenario: Industrial Alley
 Map Size: 100 x 100
 Perception Radius: 50m
 Start: (10, 50)
@@ -11,16 +11,16 @@ Goal: (90, 50)
 --------------------------------------------------
 UAV Path (Full Map)
 --------------------------------------------------
-  path_length: 83.31
-  num_waypoints: 81
-  num_turns: 7
-  computation_time_ms: 356.96
-  smoothness: 0.408
-  optimality_ratio: 0.96
-  efficiency_ratio: 0.96
-  regions_crossed: 9
-  simplified_length: 82.19
-  simplified_points: 5
+  path_length: 88.04
+  num_waypoints: 82
+  num_turns: 20
+  computation_time_ms: 1205.878
+  smoothness: 0.469
+  optimality_ratio: 0.909
+  efficiency_ratio: 0.909
+  regions_crossed: 11
+  simplified_length: 85.83
+  simplified_points: 7
 
 --------------------------------------------------
 Dog Path (Partial Map)
@@ -28,16 +28,16 @@ Dog Path (Partial Map)
   Status: partial
   Boundary Point: (60.00, 50.00)
   Reason: Goal outside perception radius
-  path_length: 53.31
+  path_length: 50.0
   num_waypoints: 51
-  num_turns: 5
-  computation_time_ms: 44.907
-  smoothness: 0.413
-  optimality_ratio: 0.938
-  efficiency_ratio: 0.938
-  regions_crossed: 8
-  simplified_length: 52.72
-  simplified_points: 4
+  num_turns: 0
+  computation_time_ms: 4.765
+  smoothness: 1
+  optimality_ratio: 1.0
+  efficiency_ratio: 1.0
+  regions_crossed: 6
+  simplified_length: 50.0
+  simplified_points: 2
 
 --------------------------------------------------
 Fusion Decision
@@ -48,13 +48,13 @@ Fusion Decision
     - Goal outside perception radius
 
   Final Path Metrics:
-    path_length: 83.31
-    num_waypoints: 81
-    num_turns: 7
-    computation_time_ms: 356.96
-    smoothness: 0.408
-    optimality_ratio: 0.96
-    efficiency_ratio: 0.96
-    regions_crossed: 9
-    simplified_length: 82.19
-    simplified_points: 5
+    path_length: 88.04
+    num_waypoints: 82
+    num_turns: 20
+    computation_time_ms: 1205.878
+    smoothness: 0.469
+    optimality_ratio: 0.909
+    efficiency_ratio: 0.909
+    regions_crossed: 11
+    simplified_length: 85.83
+    simplified_points: 7

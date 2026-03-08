@@ -112,7 +112,7 @@ def draw_mosaic_region(ax, center: Tuple[float, float], radius: float, map_size:
     x_center, y_center = center
     map_width, map_height = map_size
     
-    num_segments = 48
+    num_segments = 60
     
     for i in range(num_segments):
         angle1 = 2 * math.pi * i / num_segments
@@ -137,12 +137,13 @@ def draw_mosaic_region(ax, center: Tuple[float, float], radius: float, map_size:
             (x_ext, y_ext)
         ]
         
-        gray_value = 0.75 + random.random() * 0.15
+        gray_value = 0.65 + random.random() * 0.15
         color = str(gray_value)
-        alpha = 0.15 + random.random() * 0.1
+        alpha = 0.35 + random.random() * 0.15
         
         polygon = plt.Polygon(vertices, facecolor=color,
-                             edgecolor='none', alpha=alpha, zorder=0)
+                             edgecolor='#666666', linewidth=0.5,
+                             alpha=alpha, zorder=0, hatch='///')
         ax.add_patch(polygon)
     
     circle = plt.Circle((x_center, y_center), radius, fill=False, 

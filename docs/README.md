@@ -1,47 +1,46 @@
-# UAV实时控制系统
+# UAV 文档目录
 
-PC端地面站实时控制无人机的完整解决方案。
+这里存放项目背景、学习路径、阶段设计和常见问题文档。
+
+## 推荐阅读顺序
+
+1. `docs/LEARNING_GUIDE.md`
+2. `docs/PROJECT_CONTEXT.md`
+3. `docs/FAQ.md`
+4. `docs/PHASE1_IMPLEMENTATION.md` 到 `docs/PHASE4_PLAN.md`
 
 ## 快速开始
 
 ```bash
-# 1. 启动SITL仿真
-python3 sitl_control.py
+# 1. 先做 AHRS / PreArm 诊断
+python3 tests/ahrs_diagnostics.py --connection /dev/ttyACM0
 
-# 2. 运行诊断（检测Bad AHRS）
-python3 ahrs_diagnostics.py --connection tcp:127.0.0.1:5760 --baud 57600
+# 2. 跑一遍 SITL 飞行流程测试
+python3 tests/flight_test.py --mode full
 
-# 3. 飞行测试
-python3 flight_test.py --mode arm_test
+# 3. 需要分项定位问题时
+python3 tests/uav_test.py --mode sitl --auto
 ```
 
-## 项目结构
+## 当前代码主线
 
-```
-uav/
-├── drone_server.py          # 香橙派服务端（核心）
-├── ground_station.py        # PC地面站
-├── flight_test.py           # 飞行测试
-├── yaw_controller.py        # 航向控制
-├── ahrs_diagnostics.py      # AHRS诊断
-├── sitl_control.py          # SITL模拟器
-├── LEARNING_GUIDE.md        # 学习指南 ← 推荐先读这个
-└── archive/                 # 历史代码
-```
+| 目录 | 说明 |
+| --- | --- |
+| `src/drone/` | 无人机端真实控制代码 |
+| `src/ground_station/` | 地面站控制端 |
+| `src/dog/` | 机器狗动作适配层 |
+| `tests/` | 诊断与飞行测试入口 |
+| `simulation/` | 路径规划仿真与评估 |
 
 ## 连接方式
 
 | 环境 | 连接字符串 | 波特率 |
-|-----|----------|--------|
-| SITL仿真 | `tcp:127.0.0.1:5760` | 57600 |
-| 真实飞控(USB) | `/dev/ttyACM0` | 921600 |
+| --- | --- | --- |
+| SITL 仿真 | `udp:127.0.0.1:14550` | 57600 |
+| 真实飞控 (USB) | `/dev/ttyACM0` | 921600 |
 
-## 学习路径
+## 常用端口
 
-见 `LEARNING_GUIDE.md`
-
-## 通信端口
-
-- TCP 5000: 控制指令
-- TCP 5001: 状态回传
-- UDP 14550: MAVLink
+- `TCP 5000`：地面站到无人机控制指令
+- `TCP 5001`：状态回传 / 状态监听
+- `UDP 14550`：SITL / MAVLink 常用端口

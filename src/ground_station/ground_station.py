@@ -8,7 +8,6 @@ import socket
 import json
 import time
 import threading
-from dronekit import connect, VehicleMode
 
 
 class GroundStation:
@@ -65,10 +64,14 @@ class GroundStation:
 
     def _print_telemetry(self, data):
         """打印无人机状态信息"""
-        print(f"[状态] 高度: {data.get('altitude', 'N/A'):.2f}m | "
-              f"速度: {data.get('speed', 'N/A'):.2f}m/s | "
-              f"电量: {data.get('battery', 'N/A')}% | "
-              f"模式: {data.get('mode', 'N/A')}")
+        altitude = data.get('altitude')
+        speed = data.get('speed')
+        battery = data.get('battery', 'N/A')
+        mode = data.get('mode', 'N/A')
+
+        altitude_text = f"{altitude:.2f}m" if isinstance(altitude, (int, float)) else 'N/A'
+        speed_text = f"{speed:.2f}m/s" if isinstance(speed, (int, float)) else 'N/A'
+        print(f"[状态] 高度: {altitude_text} | 速度: {speed_text} | 电量: {battery}% | 模式: {mode}")
 
     def send_command(self, command_type, **params):
         """发送控制指令"""
@@ -264,14 +267,20 @@ def interactive_control(gs):
             print(f"错误: {e}")
 
 
-if __name__ == '__main__':
-    # 配置香橙派的IP地址
-    ORANGE_PI_IP = '192.168.1.100'  # 改为你的香橙派实际IP
-    PORT = 5000
+def main():
+    import argparse
 
-    gs = GroundStation(server_ip=ORANGE_PI_IP, server_port=PORT)
+    parser = argparse.ArgumentParser(description='无人机地面站控制程序')
+    parser.add_argument('--ip', default='192.168.1.100', help='香橙派服务端 IP 地址')
+    parser.add_argument('--port', type=int, default=5000, help='香橙派服务端端口')
+    args = parser.parse_args()
 
-    if gs.connect():
-        interactive_control(gs)
+    ground_station = GroundStation(server_ip=args.ip, server_port=args.port)
+    if ground_station.connect():
+        interactive_control(ground_station)
     else:
-        print("无法连接到香橙派，请检查IP地址和端口")
+        print("无法连接到香橙派，请检查 IP 地址和端口")
+
+
+if __name__ == '__main__':
+    main()

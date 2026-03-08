@@ -1,91 +1,158 @@
 {
-  "name": "Scenario B: Medium Complexity Maze",
-  "description": "Medium complexity maze with obstacles requiring path deviation",
-  "map_size": {"x": 80, "y": 80},
-  "start": {"x": 10, "y": 40},
-  "goal": {"x": 70, "y": 40},
-  "perception_radius": 40,
+  "name": "Scenario: Narrow Alley",
+  "description": "Complex narrow alley with multiple dead ends and traps",
+  "map_size": {"x": 100, "y": 100},
+  "start": {"x": 5, "y": 50},
+  "goal": {"x": 95, "y": 50},
+  "perception_radius": 50,
   "obstacles": [
     {
       "id": "wall_1",
       "type": "wall",
-      "start_point": {"x": 30, "y": 0},
-      "end_point": {"x": 30, "y": 25},
-      "width": 1
+      "start_point": {"x": 15, "y": 0},
+      "end_point": {"x": 15, "y": 40},
+      "width": 1.5
+    },
+    {
+      "id": "wall_1_deadend",
+      "type": "wall",
+      "start_point": {"x": 15, "y": 50},
+      "end_point": {"x": 15, "y": 65},
+      "width": 1.5
     },
     {
       "id": "wall_2",
       "type": "wall",
-      "start_point": {"x": 30, "y": 35},
-      "end_point": {"x": 30, "y": 80},
-      "width": 1
-    },
-    {
-      "id": "blocker_1",
-      "type": "rectangle",
-      "position": {"x": 20, "y": 25},
-      "size": {"width": 5, "height": 5}
-    },
-    {
-      "id": "blocker_2",
-      "type": "rectangle",
-      "position": {"x": 20, "y": 55},
-      "size": {"width": 5, "height": 5}
-    },
-    {
-      "id": "blocker_3",
-      "type": "circle",
-      "position": {"x": 45, "y": 30},
-      "size": {"radius": 2}
-    },
-    {
-      "id": "blocker_4",
-      "type": "circle",
-      "position": {"x": 45, "y": 50},
-      "size": {"radius": 2}
+      "start_point": {"x": 15, "y": 75},
+      "end_point": {"x": 15, "y": 100},
+      "width": 1.5
     },
     {
       "id": "wall_3",
       "type": "wall",
-      "start_point": {"x": 55, "y": 15},
-      "end_point": {"x": 80, "y": 15},
-      "width": 1
+      "start_point": {"x": 30, "y": 15},
+      "end_point": {"x": 30, "y": 50},
+      "width": 1.5
+    },
+    {
+      "id": "wall_3_deadend",
+      "type": "wall",
+      "start_point": {"x": 30, "y": 60},
+      "end_point": {"x": 30, "y": 75},
+      "width": 1.5
     },
     {
       "id": "wall_4",
       "type": "wall",
-      "start_point": {"x": 55, "y": 65},
-      "end_point": {"x": 80, "y": 65},
-      "width": 1
+      "start_point": {"x": 30, "y": 85},
+      "end_point": {"x": 30, "y": 100},
+      "width": 1.5
     },
     {
-      "id": "blocker_5",
+      "id": "wall_5",
+      "type": "wall",
+      "start_point": {"x": 45, "y": 0},
+      "end_point": {"x": 45, "y": 30},
+      "width": 1.5
+    },
+    {
+      "id": "wall_5_deadend",
+      "type": "wall",
+      "start_point": {"x": 45, "y": 40},
+      "end_point": {"x": 45, "y": 60},
+      "width": 1.5
+    },
+    {
+      "id": "wall_6",
+      "type": "wall",
+      "start_point": {"x": 45, "y": 70},
+      "end_point": {"x": 45, "y": 100},
+      "width": 1.5
+    },
+    {
+      "id": "wall_7",
+      "type": "wall",
+      "start_point": {"x": 60, "y": 20},
+      "end_point": {"x": 60, "y": 55},
+      "width": 1.5
+    },
+    {
+      "id": "wall_7_deadend",
+      "type": "wall",
+      "start_point": {"x": 60, "y": 65},
+      "end_point": {"x": 60, "y": 80},
+      "width": 1.5
+    },
+    {
+      "id": "wall_8",
+      "type": "wall",
+      "start_point": {"x": 60, "y": 90},
+      "end_point": {"x": 60, "y": 100},
+      "width": 1.5
+    },
+    {
+      "id": "wall_9",
+      "type": "wall",
+      "start_point": {"x": 75, "y": 0},
+      "end_point": {"x": 75, "y": 35},
+      "width": 1.5
+    },
+    {
+      "id": "wall_9_deadend",
+      "type": "wall",
+      "start_point": {"x": 75, "y": 45},
+      "end_point": {"x": 75, "y": 65},
+      "width": 1.5
+    },
+    {
+      "id": "wall_10",
+      "type": "wall",
+      "start_point": {"x": 75, "y": 75},
+      "end_point": {"x": 75, "y": 100},
+      "width": 1.5
+    },
+    {
+      "id": "wall_11",
+      "type": "wall",
+      "start_point": {"x": 90, "y": 25},
+      "end_point": {"x": 90, "y": 60},
+      "width": 1.5
+    },
+    {
+      "id": "wall_11_deadend",
+      "type": "wall",
+      "start_point": {"x": 90, "y": 70},
+      "end_point": {"x": 90, "y": 85},
+      "width": 1.5
+    },
+    {
+      "id": "blocker_1",
       "type": "rectangle",
-      "position": {"x": 65, "y": 8},
+      "position": {"x": 22, "y": 45},
       "size": {"width": 4, "height": 4}
     },
     {
-      "id": "blocker_6",
+      "id": "blocker_2",
       "type": "rectangle",
-      "position": {"x": 68, "y": 72},
-      "size": {"width": 5, "height": 5}
+      "position": {"x": 52, "y": 35},
+      "size": {"width": 4, "height": 4}
     },
     {
       "id": "debris_1",
       "type": "circle",
-      "position": {"x": 58, "y": 35},
+      "position": {"x": 38, "y": 85},
       "size": {"radius": 1.5}
     },
     {
       "id": "debris_2",
       "type": "circle",
-      "position": {"x": 58, "y": 45},
+      "position": {"x": 68, "y": 20},
       "size": {"radius": 1.5}
     },
     {
       "id": "debris_3",
       "type": "circle",
-      "position": {"x": 72, "y": 40},
+      "position": {"x": 82, "y": 75},
       "size": {"radius": 1.5}
     }
   ]

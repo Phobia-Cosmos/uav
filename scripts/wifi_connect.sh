@@ -13,11 +13,15 @@ WIFI_1_BSSID="28:41:EC:29:30:10"  # 信号最强的i-HDU接入点
 
 WIFI_2_NAME="Undefined"
 WIFI_2_PASSWORD="lzh200341.."
-WIFI_2_BSSID="36:C0:AA:ED:FC:62"
+WIFI_2_BSSID=""
 
 WIFI_3_NAME="2楼"
 WIFI_3_PASSWORD="q1w2e3r4t5."
 WIFI_3_BSSID=""
+
+WIFI_4_NAME="ChinaNet-uddy"
+WIFI_4_PASSWORD="88888888"
+WIFI_4_BSSID=""
 
 # PC IP地址（状态回传）
 PC_IP="192.168.1.50"
@@ -54,12 +58,18 @@ network_exists() {
     nmcli -t -f SSID device wifi 2>/dev/null | grep -Fxq "$ssid"
 }
 
+refresh_wifi_scan() {
+    nmcli device wifi rescan 2>/dev/null || true
+    sleep 2
+}
+
 connect_wifi_nmcli() {
     local ssid="$1"
     local password="$2"
     local bssid="$3"
 
     log "正在连接WiFi: $ssid"
+    refresh_wifi_scan
 
     # 检查网络是否存在
     if ! network_exists "$ssid"; then
@@ -215,34 +225,6 @@ get_current_ip() {
     fi
 }
 
-auto_connect() {
-    log "自动尝试连接可用WiFi..."
-    log "按 Ctrl+C 中断"
-    
-    local wifi_list=(
-        "$WIFI_1_NAME:$WIFI_1_PASSWORD:$WIFI_1_BSSID"
-        "$WIFI_2_NAME:$WIFI_2_PASSWORD:$WIFI_2_BSSID"
-        "$WIFI_3_NAME:$WIFI_3_PASSWORD:$WIFI_3_BSSID"
-    )
-    
-    for wifi_info in "${wifi_list[@]}"; do
-        IFS=':' read -r ssid password bssid <<< "$wifi_info"
-        
-        log "尝试连接: $ssid"
-        
-        if connect_wifi_nmcli "$ssid" "$password" "$bssid"; then
-            log "自动连接成功!"
-            return 0
-        fi
-        
-        log "$ssid 连接失败，尝试下一个..."
-        sleep 2
-    done
-    
-    log "所有WiFi连接失败"
-    return 1
-}
-
 show_menu() {
     echo ""
     echo "================================"
@@ -252,25 +234,27 @@ show_menu() {
     echo "  1. $WIFI_1_NAME (无密码，可能需要认证)"
     echo "  2. $WIFI_2_NAME (个人热点)"
     echo "  3. $WIFI_3_NAME"
-    echo "  4. 扫描并显示可用网络"
-    echo "  5. 查看当前IP"
-    echo "  6. 断开连接"
-    echo "  7. 自动连接（依次尝试所有WiFi）"
-    echo "  8. 设置开机自动连接"
-    echo "  9. 取消开机自动连接"
+    echo "  4. $WIFI_4_NAME"
+    echo "  5. 扫描并显示可用网络"
+    echo "  6. 查看当前IP"
+    echo "  7. 断开连接"
+    echo "  8. 自动连接（学校WiFi最后尝试）"
+    echo "  9. 设置开机自动连接"
+    echo "  10. 取消开机自动连接"
     echo "  0. 退出"
     echo "================================"
     echo -n "请选择 [0-9]: "
 }
 
 auto_connect() {
-    log "自动尝试连接可用WiFi..."
+    log "自动尝试连接可用WiFi（学校WiFi最后）..."
     log "按 Ctrl+C 中断"
     
     local wifi_list=(
-        "$WIFI_1_NAME:$WIFI_1_PASSWORD:$WIFI_1_BSSID"
         "$WIFI_2_NAME:$WIFI_2_PASSWORD:$WIFI_2_BSSID"
         "$WIFI_3_NAME:$WIFI_3_PASSWORD:$WIFI_3_BSSID"
+        "$WIFI_4_NAME:$WIFI_4_PASSWORD:$WIFI_4_BSSID"
+        "$WIFI_1_NAME:$WIFI_1_PASSWORD:$WIFI_1_BSSID"
     )
     
     for wifi_info in "${wifi_list[@]}"; do
@@ -343,6 +327,7 @@ main() {
                     1) connect_wifi_nmcli "$WIFI_1_NAME" "$WIFI_1_PASSWORD" "$WIFI_1_BSSID" ;;
                     2) connect_wifi_nmcli "$WIFI_2_NAME" "$WIFI_2_PASSWORD" "$WIFI_2_BSSID" ;;
                     3) connect_wifi_nmcli "$WIFI_3_NAME" "$WIFI_3_PASSWORD" "$WIFI_3_BSSID" ;;
+                    4) connect_wifi_nmcli "$WIFI_4_NAME" "$WIFI_4_PASSWORD" "$WIFI_4_BSSID" ;;
                     *) echo "未知参数: $1" ;;
                 esac
                 exit $?
@@ -366,22 +351,25 @@ main() {
                 connect_wifi_nmcli "$WIFI_3_NAME" "$WIFI_3_PASSWORD" "$WIFI_3_BSSID"
                 ;;
             4)
-                scan_networks
+                connect_wifi_nmcli "$WIFI_4_NAME" "$WIFI_4_PASSWORD" "$WIFI_4_BSSID"
                 ;;
             5)
-                get_current_ip
+                scan_networks
                 ;;
             6)
+                get_current_ip
+                ;;
+            7)
                 disconnect_all "$WIFI_IFACE"
                 log "已断开连接"
                 ;;
-            7)
+            8)
                 auto_connect
                 ;;
-            8)
+            9)
                 setup_autostart
                 ;;
-            9)
+            10)
                 remove_autostart
                 ;;
             0)

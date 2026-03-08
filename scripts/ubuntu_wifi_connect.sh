@@ -13,11 +13,15 @@ WIFI_1_BSSID="28:41:EC:29:30:10"  # 信号最强的i-HDU接入点
 
 WIFI_2_NAME="Undefined"
 WIFI_2_PASSWORD="lzh200341.."
-WIFI_2_BSSID="36:C0:AA:ED:FC:62"
+WIFI_2_BSSID=""
 
 WIFI_3_NAME="2楼"
 WIFI_3_PASSWORD="q1w2e3r4t5."
 WIFI_3_BSSID=""
+
+WIFI_4_NAME="ChinaNet-uddy"
+WIFI_4_PASSWORD="88888888"
+WIFI_4_BSSID=""
 
 LOG_FILE="/tmp/wifi_connect.log"
 
@@ -144,12 +148,13 @@ show_menu() {
     echo "  1. $WIFI_1_NAME (无密码，可能需要认证)"
     echo "  2. $WIFI_2_NAME (个人热点)"
     echo "  3. $WIFI_3_NAME"
-    echo "  4. 扫描并显示可用网络"
-    echo "  5. 查看当前IP"
-    echo "  6. 断开连接"
-    echo "  7. 自动连接（依次尝试所有WiFi）"
-    echo "  8. 设置开机自动连接"
-    echo "  9. 取消开机自动连接"
+    echo "  4. $WIFI_4_NAME"
+    echo "  5. 扫描并显示可用网络"
+    echo "  6. 查看当前IP"
+    echo "  7. 断开连接"
+    echo "  8. 自动连接（依次尝试所有WiFi）"
+    echo "  9. 设置开机自动连接"
+    echo "  10. 取消开机自动连接"
     echo "  0. 退出"
     echo "================================"
     echo -n "请选择 [0-9]: "
@@ -205,6 +210,7 @@ auto_connect() {
         "$WIFI_1_NAME:$WIFI_1_PASSWORD:$WIFI_1_BSSID"
         "$WIFI_2_NAME:$WIFI_2_PASSWORD:$WIFI_2_BSSID"
         "$WIFI_3_NAME:$WIFI_3_PASSWORD:$WIFI_3_BSSID"
+        "$WIFI_4_NAME:$WIFI_4_PASSWORD:$WIFI_4_BSSID"
     )
     
     for wifi_info in "${wifi_list[@]}"; do
@@ -253,6 +259,9 @@ main() {
             3)
                 connect_wifi_nmcli "$WIFI_3_NAME" "$WIFI_3_PASSWORD" "$WIFI_3_BSSID"
                 ;;
+            4)
+                connect_wifi_nmcli "$WIFI_4_NAME" "$WIFI_4_PASSWORD" "$WIFI_4_BSSID"
+                ;;
             --scan|-s)
                 scan_networks
                 ;;
@@ -281,6 +290,7 @@ main() {
                 echo "  1                   连接i-HDU"
                 echo "  2                   连接Undefined"
                 echo "  3                   连接2楼"
+                echo "  4                   连接ChinaNet-uddy"
                 echo "  --scan, -s          扫描可用网络"
                 echo "  --status, -S        查看当前IP"
                 echo "  --disconnect        断开连接"
@@ -307,22 +317,25 @@ main() {
                 connect_wifi_nmcli "$WIFI_3_NAME" "$WIFI_3_PASSWORD" "$WIFI_3_BSSID"
                 ;;
             4)
-                scan_networks
+                connect_wifi_nmcli "$WIFI_4_NAME" "$WIFI_4_PASSWORD" "$WIFI_4_BSSID"
                 ;;
             5)
-                get_current_ip
+                scan_networks
                 ;;
             6)
+                get_current_ip
+                ;;
+            7)
                 disconnect_all "$WIFI_IFACE"
                 log "已断开连接"
                 ;;
-            7)
+            8)
                 auto_connect
                 ;;
-            8)
+            9)
                 setup_autostart
                 ;;
-            9)
+            10)
                 remove_autostart
                 ;;
             0)

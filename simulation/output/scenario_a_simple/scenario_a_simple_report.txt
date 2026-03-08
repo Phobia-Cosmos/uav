@@ -2,41 +2,41 @@
 UAV vs Dog Path Fusion Report
 ================================================================================
 
-Scenario: Scenario A: Simple Maze
-Map Size: 60 x 60
-Perception Radius: 30m
-Start: (5, 30)
-Goal: (55, 30)
+Scenario: Scenario: Urban City
+Map Size: 100 x 100
+Perception Radius: 50m
+Start: (10, 50)
+Goal: (90, 50)
 
 --------------------------------------------------
 UAV Path (Full Map)
 --------------------------------------------------
-  path_length: 59.11
-  num_waypoints: 51
-  num_turns: 18
-  computation_time_ms: 173.859
-  smoothness: 0.513
-  optimality_ratio: 0.846
-  efficiency_ratio: 0.846
-  regions_crossed: 12
-  simplified_length: 57.2
-  simplified_points: 4
+  path_length: 93.36
+  num_waypoints: 84
+  num_turns: 17
+  computation_time_ms: 426.552
+  smoothness: 0.453
+  optimality_ratio: 0.857
+  efficiency_ratio: 0.857
+  regions_crossed: 11
+  simplified_length: 91.39
+  simplified_points: 8
 
 --------------------------------------------------
 Dog Path (Partial Map)
 --------------------------------------------------
   Status: partial
-  Boundary Point: (35.00, 30.00)
+  Boundary Point: (60.00, 50.00)
   Reason: Goal outside perception radius
-  path_length: 31.66
-  num_waypoints: 31
-  num_turns: 4
-  computation_time_ms: 15.635
-  smoothness: 0.427
-  optimality_ratio: 0.948
-  efficiency_ratio: 0.948
-  regions_crossed: 6
-  simplified_length: 31.03
+  path_length: 58.38
+  num_waypoints: 54
+  num_turns: 14
+  computation_time_ms: 41.39
+  smoothness: 0.476
+  optimality_ratio: 0.856
+  efficiency_ratio: 0.856
+  regions_crossed: 8
+  simplified_length: 56.56
   simplified_points: 4
 
 --------------------------------------------------
@@ -48,13 +48,13 @@ Fusion Decision
     - Goal outside perception radius
 
   Final Path Metrics:
-    path_length: 59.11
-    num_waypoints: 51
-    num_turns: 18
-    computation_time_ms: 173.859
-    smoothness: 0.513
-    optimality_ratio: 0.846
-    efficiency_ratio: 0.846
-    regions_crossed: 12
-    simplified_length: 57.2
-    simplified_points: 4
+    path_length: 93.36
+    num_waypoints: 84
+    num_turns: 17
+    computation_time_ms: 426.552
+    smoothness: 0.453
+    optimality_ratio: 0.857
+    efficiency_ratio: 0.857
+    regions_crossed: 11
+    simplified_length: 91.39
+    simplified_points: 8

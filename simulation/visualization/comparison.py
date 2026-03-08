@@ -10,11 +10,11 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from typing import Dict, List
+import argparse
+import json
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
-from map_generator import Obstacle2D
 
 
 COLORS = {
@@ -200,17 +200,28 @@ class PathVisualizer:
         print(f"Path comparison saved: {output_path}")
 
 
+def parse_args() -> argparse.Namespace:
+    base_dir = os.path.dirname(os.path.dirname(__file__))
+    default_config = os.path.join(base_dir, "config", "scenarios", "scenario_a_simple.json")
+    default_output = os.path.join(base_dir, "output", "scenarios", "simple_map.png")
+
+    parser = argparse.ArgumentParser(description='路径规划可视化工具')
+    parser.add_argument('--config', default=default_config, help='场景配置文件路径')
+    parser.add_argument('--output', default=default_output, help='输出图片路径')
+    return parser.parse_args()
+
+
 def main():
-    """测试可视化"""
-    import json
+    """测试可视化。"""
+    args = parse_args()
 
-    config_path = "/home/undefined/Desktop/uav/uav/simulation/config/scenarios/scenario_a_simple.json"
-    with open(config_path, 'r') as f:
-        config = json.load(f)
+    with open(args.config, 'r', encoding='utf-8') as file:
+        config = json.load(file)
 
+    os.makedirs(os.path.dirname(args.output), exist_ok=True)
     print("Testing visualization...")
     visualizer = PathVisualizer(config)
-    visualizer.plot_scenario_map("output/scenarios/simple_map.png")
+    visualizer.plot_scenario_map(args.output)
 
 
 if __name__ == "__main__":
