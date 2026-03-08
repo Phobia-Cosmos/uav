@@ -75,6 +75,9 @@ class PlanSnapshot:
     points: List[Dict[str, float]]
     metrics: Dict[str, float]
     obstacle_count: int
+    prefix_length: float
+    remaining_length: float
+    total_mission_length: float
 
 
 @dataclass
@@ -112,7 +115,8 @@ def plan_route(start: Tuple[float, float],
                goal: Tuple[float, float],
                obstacles: List[Dict],
                map_size: Tuple[float, float],
-               label: str) -> Optional[PlanSnapshot]:
+               label: str,
+               prefix_length: float = 0.0) -> Optional[PlanSnapshot]:
     planner = AStar([Obstacle2D.from_dict(obstacle) for obstacle in obstacles], map_size)
     start_time = time.time()
     result = planner.plan(start, goal, heuristic_method="euclidean")
@@ -131,6 +135,8 @@ def plan_route(start: Tuple[float, float],
         theoretical_distance=theoretical_distance,
         map_size=map_size,
     )
+    remaining_length = float(metrics.get('path_length', 0.0))
+    total_mission_length = round(prefix_length + remaining_length, 2)
     return PlanSnapshot(
         label=label,
         start={"x": start[0], "y": start[1]},
@@ -138,6 +144,9 @@ def plan_route(start: Tuple[float, float],
         points=result["points"],
         metrics=metrics,
         obstacle_count=len(obstacles),
+        prefix_length=round(prefix_length, 2),
+        remaining_length=remaining_length,
+        total_mission_length=total_mission_length,
     )
 
 
@@ -330,7 +339,8 @@ def simulate_scenario(config: Dict) -> ScenarioResult:
     for _ in range(max_iterations):
         planning_obstacles = build_fused_planning_obstacles(config, result.discovered_ids)
         plan_label = f"P_{len(result.plans)}"
-        snapshot = plan_route(current_position, goal, planning_obstacles, map_size, plan_label)
+        prefix_length = PathMetrics.path_length(result.executed_trace)
+        snapshot = plan_route(current_position, goal, planning_obstacles, map_size, plan_label, prefix_length=prefix_length)
         if snapshot is None:
             result.failure_reason = f"{plan_label} 规划失败"
             return result
@@ -446,11 +456,11 @@ def create_fusion_figure(result: ScenarioResult, output_path: str):
 
 def create_metrics_figure(result: ScenarioResult, output_path: str):
     plan_labels = [plan.label for plan in result.plans]
-    plan_lengths = [plan.metrics.get('path_length', 0.0) for plan in result.plans]
+    plan_lengths = [plan.total_mission_length for plan in result.plans]
     waypoints = [plan.metrics.get('num_waypoints', 0) for plan in result.plans]
     executed_length = PathMetrics.path_length(result.executed_trace)
-    initial_length = result.initial_plan.metrics.get('path_length', 0.0) if result.initial_plan else 0.0
-    final_length = result.final_plan.metrics.get('path_length', 0.0) if result.final_plan else 0.0
+    initial_length = result.initial_plan.total_mission_length if result.initial_plan else 0.0
+    final_length = result.final_plan.total_mission_length if result.final_plan else 0.0
 
     crawl_updates = 0
     swamp_updates = 0
@@ -464,7 +474,7 @@ def create_metrics_figure(result: ScenarioResult, output_path: str):
     fig, axes = plt.subplots(2, 2, figsize=(16, 11))
 
     axes[0, 0].plot(plan_labels, plan_lengths, marker='o', color=COLORS['final_path'], linewidth=2.5)
-    axes[0, 0].set_title('Path Length After Each Replan')
+    axes[0, 0].set_title('Whole-Mission Length After Each Decision')
     axes[0, 0].set_ylabel('Length (m)')
     axes[0, 0].grid(True, alpha=0.25)
 
@@ -473,11 +483,11 @@ def create_metrics_figure(result: ScenarioResult, output_path: str):
     axes[0, 1].set_ylabel('Waypoints')
     axes[0, 1].grid(True, axis='y', alpha=0.25)
 
-    compare_labels = ['Initial plan', 'Final plan', 'Executed trace']
+    compare_labels = ['Initial decision', 'Final decision', 'Executed actual']
     compare_values = [initial_length, final_length, executed_length]
     axes[1, 0].bar(compare_labels, compare_values,
                    color=[COLORS['initial_path'], COLORS['final_path'], COLORS['executed']], alpha=0.85)
-    axes[1, 0].set_title('Length Comparison')
+    axes[1, 0].set_title('Whole-Mission Length Comparison')
     axes[1, 0].set_ylabel('Length (m)')
     axes[1, 0].grid(True, axis='y', alpha=0.25)
 
@@ -485,7 +495,7 @@ def create_metrics_figure(result: ScenarioResult, output_path: str):
     event_values = [len(result.events), sum(len(event.uploaded_packets) for event in result.events), crawl_updates, swamp_updates]
     axes[1, 1].bar(event_labels, event_values,
                    color=[COLORS['circle'], COLORS['event'], COLORS['crawl_edge'], COLORS['swamp_edge']], alpha=0.85)
-    axes[1, 1].set_title('Cooperation Events')
+    axes[1, 1].set_title('Cooperation Event Counts')
     axes[1, 1].grid(True, axis='y', alpha=0.25)
 
     plt.suptitle(f"{result.config['name']} - Replanning Metrics", fontsize=15, fontweight='bold')
@@ -514,7 +524,9 @@ def write_report(result: ScenarioResult, output_path: str):
 
         file.write("=== Planning Summary ===\n")
         for plan in result.plans:
-            file.write(f"{plan.label}: length={plan.metrics.get('path_length')}m, ")
+            file.write(f"{plan.label}: whole_mission={plan.total_mission_length}m, ")
+            file.write(f"remaining={plan.remaining_length}m, ")
+            file.write(f"prefix_before_plan={plan.prefix_length}m, ")
             file.write(f"waypoints={plan.metrics.get('num_waypoints')}, ")
             file.write(f"turns={plan.metrics.get('num_turns')}, ")
             file.write(f"time={plan.metrics.get('computation_time_ms')}ms, ")
@@ -542,11 +554,13 @@ def write_report(result: ScenarioResult, output_path: str):
         if result.failure_reason:
             file.write(f"Failure Reason: {result.failure_reason}\n")
         file.write(f"Discovered semantic obstacle ids: {sorted(result.discovered_ids)}\n")
-        file.write(f"Executed trace length: {PathMetrics.path_length(result.executed_trace):.2f}m\n")
+        file.write(f"Executed actual mission length: {PathMetrics.path_length(result.executed_trace):.2f}m\n")
         if result.initial_plan:
-            file.write(f"Initial path length: {result.initial_plan.metrics.get('path_length')}m\n")
+            file.write(f"Initial whole-mission estimate: {result.initial_plan.total_mission_length}m\n")
+            file.write(f"Initial remaining length: {result.initial_plan.remaining_length}m\n")
         if result.final_plan:
-            file.write(f"Final path length: {result.final_plan.metrics.get('path_length')}m\n")
+            file.write(f"Final-decision whole-mission estimate: {result.final_plan.total_mission_length}m\n")
+            file.write(f"Final remaining length: {result.final_plan.remaining_length}m\n")
 
 
 def scenario_list(base_dir: str) -> List[Tuple[str, str]]:
@@ -583,7 +597,7 @@ def main():
         print(f"  triggers: {len(result.events)}")
         print(f"  discovered semantic obstacles: {sorted(result.discovered_ids)}")
         if result.final_plan:
-            print(f"  final path length: {result.final_plan.metrics.get('path_length')}m")
+            print(f"  final whole-mission estimate: {result.final_plan.total_mission_length}m")
         if result.failure_reason:
             print(f"  failure reason: {result.failure_reason}")
 

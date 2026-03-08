@@ -10,9 +10,9 @@ Dog-passable walls: ['crawl_wall_1', 'crawl_wall_2']
 Swamp / quicksand / water: ['water_front']
 
 === Planning Summary ===
-P_0: length=106.06m, waypoints=3, turns=1, time=129.523ms, obstacles=7
-P_1: length=90.08m, waypoints=4, turns=2, time=67.682ms, obstacles=8
-P_2: length=39.56m, waypoints=2, turns=0, time=18.536ms, obstacles=7
+P_0: whole_mission=106.06m, remaining=106.06m, prefix_before_plan=0.0m, waypoints=3, turns=1, time=129.154ms, obstacles=7
+P_1: whole_mission=107.31m, remaining=90.08m, prefix_before_plan=17.23m, waypoints=4, turns=2, time=67.656ms, obstacles=8
+P_2: whole_mission=105.42m, remaining=39.56m, prefix_before_plan=65.86m, waypoints=2, turns=0, time=18.451ms, obstacles=7
 
 === Trigger Events ===
 E1 @ (26.92, 41.75)
@@ -34,6 +34,8 @@ E2 @ (72.93, 31.00)
 === Final Result ===
 Success: True
 Discovered semantic obstacle ids: ['crawl_wall_2', 'water_front']
-Executed trace length: 105.48m
-Initial path length: 106.06m
-Final path length: 39.56m
+Executed actual mission length: 105.48m
+Initial whole-mission estimate: 106.06m
+Initial remaining length: 106.06m
+Final-decision whole-mission estimate: 105.42m
+Final remaining length: 39.56m
