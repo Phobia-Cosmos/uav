@@ -169,6 +169,21 @@ def format_semantic_name(semantic_type: str) -> str:
     return mapping.get(semantic_type, semantic_type)
 
 
+def format_semantic_name_ascii(semantic_type: str) -> str:
+    mapping = {
+        "crawl_under_wall": "Crawl wall",
+        "low_wall": "Low wall",
+        "climbable_wall": "Climbable wall",
+        "swamp": "Swamp",
+        "quicksand": "Quicksand",
+        "water": "Water",
+        "dead_end_wall": "Dead-end wall",
+        "building": "Building",
+        "generic": "Obstacle",
+    }
+    return mapping.get(semantic_type, semantic_type)
+
+
 def obstacle_style(obstacle: Dict, view: str, discovered: bool = False) -> Optional[Dict]:
     semantic_type = obstacle_semantic_type(obstacle)
 
@@ -455,51 +470,89 @@ def create_fusion_figure(result: ScenarioResult, output_path: str):
 
 
 def create_metrics_figure(result: ScenarioResult, output_path: str):
+    if not result.plans:
+        return
+
     plan_labels = [plan.label for plan in result.plans]
     plan_lengths = [plan.total_mission_length for plan in result.plans]
-    waypoints = [plan.metrics.get('num_waypoints', 0) for plan in result.plans]
     executed_length = PathMetrics.path_length(result.executed_trace)
     initial_length = result.initial_plan.total_mission_length if result.initial_plan else 0.0
     final_length = result.final_plan.total_mission_length if result.final_plan else 0.0
 
-    crawl_updates = 0
-    swamp_updates = 0
-    for event in result.events:
-        for packet in event.uploaded_packets:
-            if packet['semantic_type'] in CRAWL_TYPES:
-                crawl_updates += 1
-            if packet['semantic_type'] in SWAMP_TYPES:
-                swamp_updates += 1
+    fig, axes = plt.subplots(1, 2, figsize=(17, 7), gridspec_kw={'width_ratios': [1.5, 1.0]})
 
-    fig, axes = plt.subplots(2, 2, figsize=(16, 11))
+    decision_ax = axes[0]
+    decision_ax.plot(plan_labels, plan_lengths, marker='o', color=COLORS['final_path'], linewidth=2.8, label='Decision estimate')
+    decision_ax.axhline(executed_length, color=COLORS['executed'], linestyle='--', linewidth=2.0, label='Executed actual')
+    decision_ax.set_title('Whole-Mission Length by Decision')
+    decision_ax.set_ylabel('Length (m)')
+    decision_ax.grid(True, alpha=0.25)
 
-    axes[0, 0].plot(plan_labels, plan_lengths, marker='o', color=COLORS['final_path'], linewidth=2.5)
-    axes[0, 0].set_title('Whole-Mission Length After Each Decision')
-    axes[0, 0].set_ylabel('Length (m)')
-    axes[0, 0].grid(True, alpha=0.25)
+    for index in range(1, len(result.plans)):
+        event = result.events[index - 1] if index - 1 < len(result.events) else None
+        if event and event.uploaded_packets:
+            event_name = format_semantic_name_ascii(event.uploaded_packets[0]['semantic_type'])
+        elif event:
+            event_name = event.triggered_obstacle_id
+        else:
+            event_name = 'Replan'
+        delta = result.plans[index].total_mission_length - result.plans[index - 1].total_mission_length
+        decision_ax.annotate(
+            f"E{index} {event_name}\n{delta:+.2f}m",
+            (index, plan_lengths[index]),
+            textcoords='offset points',
+            xytext=(0, 10 if delta >= 0 else -28),
+            ha='center',
+            fontsize=9,
+            color=COLORS['event'],
+            bbox=dict(boxstyle='round,pad=0.2', facecolor='white', edgecolor='#DDDDDD', alpha=0.9),
+        )
 
-    axes[0, 1].bar(plan_labels, waypoints, color=COLORS['initial_path'], alpha=0.8)
-    axes[0, 1].set_title('Waypoints Per Plan')
-    axes[0, 1].set_ylabel('Waypoints')
-    axes[0, 1].grid(True, axis='y', alpha=0.25)
+    decision_ax.legend(loc='best', fontsize=9)
 
-    compare_labels = ['Initial decision', 'Final decision', 'Executed actual']
-    compare_values = [initial_length, final_length, executed_length]
-    axes[1, 0].bar(compare_labels, compare_values,
-                   color=[COLORS['initial_path'], COLORS['final_path'], COLORS['executed']], alpha=0.85)
-    axes[1, 0].set_title('Whole-Mission Length Comparison')
-    axes[1, 0].set_ylabel('Length (m)')
-    axes[1, 0].grid(True, axis='y', alpha=0.25)
+    summary_ax = axes[1]
+    summary_ax.axis('off')
 
-    event_labels = ['Triggers', 'Uploads', 'Low-wall fixes', 'Swamp fixes']
-    event_values = [len(result.events), sum(len(event.uploaded_packets) for event in result.events), crawl_updates, swamp_updates]
-    axes[1, 1].bar(event_labels, event_values,
-                   color=[COLORS['circle'], COLORS['event'], COLORS['crawl_edge'], COLORS['swamp_edge']], alpha=0.85)
-    axes[1, 1].set_title('Cooperation Event Counts')
-    axes[1, 1].grid(True, axis='y', alpha=0.25)
+    summary_lines = [
+        f"Initial estimate: {initial_length:.2f} m",
+        f"Final estimate: {final_length:.2f} m",
+        f"Executed actual: {executed_length:.2f} m",
+        f"Net change: {final_length - initial_length:+.2f} m",
+        f"Actual - final: {executed_length - final_length:+.2f} m",
+        f"Trigger count: {len(result.events)}",
+        "",
+        "Decision chain:",
+    ]
 
-    plt.suptitle(f"{result.config['name']} - Replanning Metrics", fontsize=15, fontweight='bold')
-    plt.tight_layout(rect=(0, 0, 1, 0.96))
+    if result.plans:
+        summary_lines.append(f"- {result.plans[0].label}: {result.plans[0].total_mission_length:.2f} m (initial)")
+
+    for index in range(1, len(result.plans)):
+        event = result.events[index - 1] if index - 1 < len(result.events) else None
+        if event and event.uploaded_packets:
+            event_name = format_semantic_name_ascii(event.uploaded_packets[0]['semantic_type'])
+        elif event:
+            event_name = event.triggered_obstacle_id
+        else:
+            event_name = 'Unknown event'
+        delta = result.plans[index].total_mission_length - result.plans[index - 1].total_mission_length
+        summary_lines.append(
+            f"- E{index} {event_name} -> {result.plans[index].label}: {result.plans[index].total_mission_length:.2f} m ({delta:+.2f} m)"
+        )
+
+    summary_ax.text(
+        0.02,
+        0.98,
+        '\n'.join(summary_lines),
+        va='top',
+        ha='left',
+        fontsize=11,
+        linespacing=1.5,
+        family='monospace',
+    )
+
+    plt.suptitle(f"{result.config['name']} - Decision Summary", fontsize=15, fontweight='bold')
+    plt.tight_layout(rect=(0, 0, 1, 0.95))
     plt.savefig(output_path, dpi=160, bbox_inches='tight', facecolor='white')
     plt.close(fig)
 
@@ -531,6 +584,24 @@ def write_report(result: ScenarioResult, output_path: str):
             file.write(f"turns={plan.metrics.get('num_turns')}, ")
             file.write(f"time={plan.metrics.get('computation_time_ms')}ms, ")
             file.write(f"obstacles={plan.obstacle_count}\n")
+        file.write("\n")
+
+        file.write("=== Decision Length Evolution ===\n")
+        if result.plans:
+            file.write(f"Initial decision {result.plans[0].label}: {result.plans[0].total_mission_length}m\n")
+        for index in range(1, len(result.plans)):
+            event = result.events[index - 1] if index - 1 < len(result.events) else None
+            if event and event.uploaded_packets:
+                event_name = format_semantic_name(event.uploaded_packets[0]['semantic_type'])
+            elif event:
+                event_name = event.triggered_obstacle_id
+            else:
+                event_name = "未知事件"
+            delta = round(result.plans[index].total_mission_length - result.plans[index - 1].total_mission_length, 2)
+            file.write(
+                f"E{index} ({event_name}) -> {result.plans[index].label}: "
+                f"{result.plans[index].total_mission_length}m ({delta:+.2f}m)\n"
+            )
         file.write("\n")
 
         file.write("=== Trigger Events ===\n")

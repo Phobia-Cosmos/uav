@@ -10,9 +10,14 @@ Dog-passable walls: ['crawl_wall_exit']
 Swamp / quicksand / water: ['quicksand_trap']
 
 === Planning Summary ===
-P_0: whole_mission=141.6m, remaining=141.6m, prefix_before_plan=0.0m, waypoints=11, turns=6, time=394.479ms, obstacles=6
-P_1: whole_mission=157.09m, remaining=118.56m, prefix_before_plan=38.53m, waypoints=9, turns=6, time=250.232ms, obstacles=7
-P_2: whole_mission=157.42m, remaining=87.82m, prefix_before_plan=69.6m, waypoints=6, turns=3, time=131.267ms, obstacles=6
+P_0: whole_mission=141.6m, remaining=141.6m, prefix_before_plan=0.0m, waypoints=11, turns=6, time=422.988ms, obstacles=6
+P_1: whole_mission=157.09m, remaining=118.56m, prefix_before_plan=38.53m, waypoints=9, turns=6, time=262.623ms, obstacles=7
+P_2: whole_mission=157.42m, remaining=87.82m, prefix_before_plan=69.6m, waypoints=6, turns=3, time=141.384ms, obstacles=6
+
+=== Decision Length Evolution ===
+Initial decision P_0: 141.6m
+E1 (流沙) -> P_1: 157.09m (+15.49m)
+E2 (可钻行矮墙) -> P_2: 157.42m (+0.33m)
 
 === Trigger Events ===
 E1 @ (37.78, 66.46)

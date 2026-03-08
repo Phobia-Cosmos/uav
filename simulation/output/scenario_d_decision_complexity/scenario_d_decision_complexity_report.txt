@@ -10,10 +10,16 @@ Dog-passable walls: ['climbable_deadend_gate']
 Swamp / quicksand / water: ['pool_center_1', 'pool_lower_2']
 
 === Planning Summary ===
-P_0: whole_mission=112.89m, remaining=112.89m, prefix_before_plan=0.0m, waypoints=5, turns=2, time=239.487ms, obstacles=6
-P_1: whole_mission=113.88m, remaining=106.41m, prefix_before_plan=7.47m, waypoints=6, turns=3, time=224.949ms, obstacles=7
-P_2: whole_mission=120.73m, remaining=89.71m, prefix_before_plan=31.02m, waypoints=6, turns=4, time=139.492ms, obstacles=8
-P_3: whole_mission=107.66m, remaining=40.79m, prefix_before_plan=66.87m, waypoints=2, turns=0, time=24.511ms, obstacles=7
+P_0: whole_mission=112.89m, remaining=112.89m, prefix_before_plan=0.0m, waypoints=5, turns=2, time=254.958ms, obstacles=6
+P_1: whole_mission=113.88m, remaining=106.41m, prefix_before_plan=7.47m, waypoints=6, turns=3, time=206.585ms, obstacles=7
+P_2: whole_mission=120.73m, remaining=89.71m, prefix_before_plan=31.02m, waypoints=6, turns=4, time=148.398ms, obstacles=8
+P_3: whole_mission=107.66m, remaining=40.79m, prefix_before_plan=66.87m, waypoints=2, turns=0, time=27.146ms, obstacles=7
+
+=== Decision Length Evolution ===
+Initial decision P_0: 112.89m
+E1 (水面) -> P_1: 113.88m (+0.99m)
+E2 (水面) -> P_2: 120.73m (+6.85m)
+E3 (可翻越墙体) -> P_3: 107.66m (-13.07m)
 
 === Trigger Events ===
 E1 @ (17.35, 40.65)
