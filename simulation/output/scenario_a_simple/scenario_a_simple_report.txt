@@ -10,9 +10,9 @@ Dog-passable walls: ['crawl_wall_center']
 Swamp / quicksand / water: ['swamp_upper_route']
 
 === Planning Summary ===
-P_0: length=87.04m, waypoints=4, turns=2, time=66.418ms, obstacles=6
-P_1: length=73.58m, waypoints=6, turns=4, time=47.224ms, obstacles=7
-P_2: length=56.04m, waypoints=2, turns=0, time=8.375ms, obstacles=6
+P_0: length=87.04m, waypoints=4, turns=2, time=66.894ms, obstacles=6
+P_1: length=73.58m, waypoints=6, turns=4, time=45.723ms, obstacles=7
+P_2: length=56.04m, waypoints=2, turns=0, time=8.144ms, obstacles=6
 
 === Trigger Events ===
 E1 @ (28.36, 40.09)

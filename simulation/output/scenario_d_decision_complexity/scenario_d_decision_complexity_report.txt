@@ -1,5 +1,5 @@
-Scenario: Scenario D: Pool and Climbable Dead-End Decisions
-Description: A small number of obstacles create a harder decision problem: the UAV first prefers a route that crosses a hidden water pool, then reroutes around a wall that later proves climbable at the end of a dead-end style corridor.
+Scenario: Scenario D: Multi-Misjudgment Pools and Dead Ends
+Description: This decision-heavy scenario uses several dead-end walls and multiple hidden pools, while only one dead-end terminal wall is actually climbable by the dog.
 Map Size: 120 x 85
 Start: (10, 42)
 Goal: (110, 42)
@@ -7,33 +7,42 @@ Perception Radius: 11
 
 === Semantic Obstacles ===
 Dog-passable walls: ['climbable_deadend_gate']
-Swamp / quicksand / water: ['pool_mid_upper']
+Swamp / quicksand / water: ['pool_center_1', 'pool_lower_2']
 
 === Planning Summary ===
-P_0: length=109.06m, waypoints=4, turns=1, time=131.618ms, obstacles=6
-P_1: length=82.06m, waypoints=4, turns=2, time=110.591ms, obstacles=7
-P_2: length=46.82m, waypoints=2, turns=0, time=22.876ms, obstacles=6
+P_0: length=112.89m, waypoints=5, turns=2, time=247.784ms, obstacles=6
+P_1: length=106.41m, waypoints=6, turns=3, time=231.251ms, obstacles=7
+P_2: length=89.71m, waypoints=6, turns=4, time=150.45ms, obstacles=8
+P_3: length=40.79m, waypoints=2, turns=0, time=28.049ms, obstacles=7
 
 === Trigger Events ===
-E1 @ (35.72, 34.75)
+E1 @ (17.35, 40.65)
   source plan: P_0
-  triggered by: pool_mid_upper
-  visible ids: ['pool_mid_upper']
-    - packet pool_mid_upper: 水面
+  triggered by: pool_center_1
+  visible ids: ['pool_center_1']
+    - packet pool_center_1: 水面
       traversable=False
       properties={'surface': 'pool', 'traversable': False, 'note': 'The UAV top view treats the pool like ordinary ground'}
 
-E2 @ (65.90, 26.17)
+E2 @ (38.70, 34.13)
   source plan: P_1
+  triggered by: pool_lower_2
+  visible ids: ['pool_lower_2']
+    - packet pool_lower_2: 水面
+      traversable=False
+      properties={'surface': 'pool', 'traversable': False, 'note': 'A second hidden pool placed on the lower detour chosen after the first correction'}
+
+E3 @ (69.90, 34.12)
+  source plan: P_2
   triggered by: climbable_deadend_gate
   visible ids: ['climbable_deadend_gate']
     - packet climbable_deadend_gate: 可翻越墙体
       traversable=True
-      properties={'height': 1.2, 'dog_passable': True, 'crossing_mode': 'climb_over', 'note': 'Looks like the terminal wall of a dead-end corridor from the UAV view'}
+      properties={'height': 1.2, 'dog_passable': True, 'crossing_mode': 'climb_over', 'note': 'Only this dead-end style wall is actually passable for the dog'}
 
 === Final Result ===
 Success: True
-Discovered semantic obstacle ids: ['climbable_deadend_gate', 'pool_mid_upper']
-Executed trace length: 105.29m
-Initial path length: 109.06m
-Final path length: 46.82m
+Discovered semantic obstacle ids: ['climbable_deadend_gate', 'pool_center_1', 'pool_lower_2']
+Executed trace length: 107.81m
+Initial path length: 112.89m
+Final path length: 40.79m
