@@ -15,14 +15,18 @@ import json
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from semantic_maps import get_physical_obstacles, obstacle_semantic_type
 
 
 COLORS = {
     'wall': '#8B4513',
-    'building': '#CD853F',
+    'building': '#8D6E63',
     'debris': '#708090',
-    'tree': '#228B22',
-    'start': '#00FF00',
+    'swamp_fill': '#4DB6AC',
+    'swamp_edge': '#00695C',
+    'crawl_fill': '#E0E0E0',
+    'crawl_edge': '#616161',
+    'start': '#00AA55',
     'goal': '#FF0000',
     'astar': '#FF4500',
     'background': '#F5F5DC'
@@ -32,22 +36,56 @@ COLORS = {
 def draw_obstacle(ax, obs: Dict):
     """绘制障碍物"""
     obs_type = obs.get('type', 'rectangle')
+    semantic_type = obstacle_semantic_type(obs)
+
+    if semantic_type in {'crawl_under_wall', 'low_wall'}:
+        style = {
+            'facecolor': COLORS['crawl_fill'],
+            'edgecolor': COLORS['crawl_edge'],
+            'linewidth': 2,
+            'alpha': 0.55,
+            'linestyle': '--',
+            'hatch': '///',
+        }
+    elif semantic_type in {'swamp', 'quicksand', 'water'}:
+        style = {
+            'facecolor': COLORS['swamp_fill'],
+            'edgecolor': COLORS['swamp_edge'],
+            'linewidth': 2,
+            'alpha': 0.45,
+            'linestyle': '-',
+            'hatch': 'xx',
+        }
+    else:
+        style = None
 
     if obs_type == 'rectangle':
         x, y = obs['position']['x'], obs['position']['y']
         w, h = obs['size']['width'], obs['size']['height']
         rect = plt.Rectangle(
             (x - w/2, y - h/2), w, h,
-            facecolor=COLORS.get('building'),
-            edgecolor='black', linewidth=2, alpha=0.8
+            facecolor=style['facecolor'] if style else COLORS.get('building'),
+            edgecolor=style['edgecolor'] if style else 'black',
+            linewidth=style['linewidth'] if style else 2,
+            alpha=style['alpha'] if style else 0.8,
+            linestyle=style['linestyle'] if style else '-',
+            hatch=style['hatch'] if style else None,
         )
         ax.add_patch(rect)
 
     elif obs_type == 'circle':
         x, y = obs['position']['x'], obs['position']['y']
         r = obs['size']['radius']
-        circle = plt.Circle((x, y), r, facecolor=COLORS.get('debris'),
-                           edgecolor='black', linewidth=2, alpha=0.8)
+        circle = plt.Circle(
+            (x, y),
+            r,
+            facecolor=style['facecolor'] if style else COLORS.get('debris'),
+            edgecolor=style['edgecolor'] if style else 'black',
+            linewidth=style['linewidth'] if style else 2,
+            alpha=style['alpha'] if style else 0.8,
+            linestyle=style['linestyle'] if style else '-',
+            hatch=style['hatch'] if style else None,
+        )
         ax.add_patch(circle)
 
     elif obs_type == 'wall':
@@ -63,8 +101,25 @@ def draw_obstacle(ax, obs: Dict):
         nx, ny = -dy/length * width/2, dx/length * width/2
         polygon = plt.Polygon(
             [(x1+nx, y1+ny), (x2+nx, y2+ny), (x2-nx, y2-ny), (x1-nx, y1-ny)],
-            facecolor=COLORS.get('wall'), edgecolor='black',
-            linewidth=2, alpha=0.9
+            facecolor=style['facecolor'] if style else COLORS.get('wall'),
+            edgecolor=style['edgecolor'] if style else 'black',
+            linewidth=style['linewidth'] if style else 2,
+            alpha=style['alpha'] if style else 0.9,
+            linestyle=style['linestyle'] if style else '-',
+            hatch=style['hatch'] if style else None,
+        )
+        ax.add_patch(polygon)
+
+    elif obs_type == 'polygon':
+        polygon = plt.Polygon(
+            [(vertex['x'], vertex['y']) for vertex in obs['vertices']],
+            closed=True,
+            facecolor=style['facecolor'] if style else COLORS.get('debris'),
+            edgecolor=style['edgecolor'] if style else 'black',
+            linewidth=style['linewidth'] if style else 2,
+            alpha=style['alpha'] if style else 0.45,
+            linestyle=style['linestyle'] if style else '-',
+            hatch=style['hatch'] if style else None,
         )
         ax.add_patch(polygon)
 
@@ -75,7 +130,7 @@ class PathVisualizer:
     def __init__(self, config: Dict):
         self.config = config
         self.map_size = (config['map_size']['x'], config['map_size']['y'])
-        self.obstacles = config['obstacles']
+        self.obstacles = get_physical_obstacles(config)
         if 'start' in config:
             self.start = (config['start']['x'], config['start']['y'])
             self.goal = (config['goal']['x'], config['goal']['y'])

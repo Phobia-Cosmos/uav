@@ -1,175 +1,95 @@
 {
-  "name": "Scenario: Industrial Alley",
-  "description": "Complex industrial alley with many dead ends and container traps",
-  "map_size": {"x": 100, "y": 100},
-  "start": {"x": 10, "y": 50},
-  "goal": {"x": 90, "y": 50},
-  "perception_radius": 50,
-  "obstacles": [
+  "name": "Scenario C: Urban Mixed Terrain",
+  "description": "Urban blocks, a water surface and multiple crawl-under walls create repeated tangent-trigger replanning events.",
+  "map_size": {"x": 120, "y": 90},
+  "start": {"x": 10, "y": 45},
+  "goal": {"x": 110, "y": 45},
+  "perception_radius": 14,
+  "physical_obstacles": [
     {
-      "id": "wall_1",
-      "type": "wall",
-      "start_point": {"x": 20, "y": 0},
-      "end_point": {"x": 20, "y": 40},
-      "width": 1.5
-    },
-    {
-      "id": "wall_1_deadend",
-      "type": "wall",
-      "start_point": {"x": 20, "y": 50},
-      "end_point": {"x": 20, "y": 60},
-      "width": 1.5
-    },
-    {
-      "id": "wall_1b",
-      "type": "wall",
-      "start_point": {"x": 20, "y": 70},
-      "end_point": {"x": 20, "y": 100},
-      "width": 1.5
-    },
-    {
-      "id": "wall_2",
-      "type": "wall",
-      "start_point": {"x": 35, "y": 15},
-      "end_point": {"x": 35, "y": 45},
-      "width": 1.5
-    },
-    {
-      "id": "wall_2_deadend",
-      "type": "wall",
-      "start_point": {"x": 35, "y": 55},
-      "end_point": {"x": 35, "y": 70},
-      "width": 1.5
-    },
-    {
-      "id": "wall_2b",
-      "type": "wall",
-      "start_point": {"x": 35, "y": 80},
-      "end_point": {"x": 35, "y": 100},
-      "width": 1.5
-    },
-    {
-      "id": "wall_3",
-      "type": "wall",
-      "start_point": {"x": 50, "y": 0},
-      "end_point": {"x": 50, "y": 30},
-      "width": 1.5
-    },
-    {
-      "id": "wall_3_deadend",
-      "type": "wall",
-      "start_point": {"x": 50, "y": 40},
-      "end_point": {"x": 50, "y": 55},
-      "width": 1.5
-    },
-    {
-      "id": "wall_3b",
-      "type": "wall",
-      "start_point": {"x": 50, "y": 65},
-      "end_point": {"x": 50, "y": 100},
-      "width": 1.5
-    },
-    {
-      "id": "wall_4",
-      "type": "wall",
-      "start_point": {"x": 65, "y": 20},
-      "end_point": {"x": 65, "y": 50},
-      "width": 1.5
-    },
-    {
-      "id": "wall_4_deadend",
-      "type": "wall",
-      "start_point": {"x": 65, "y": 60},
-      "end_point": {"x": 65, "y": 75},
-      "width": 1.5
-    },
-    {
-      "id": "wall_4b",
-      "type": "wall",
-      "start_point": {"x": 65, "y": 85},
-      "end_point": {"x": 65, "y": 100},
-      "width": 1.5
-    },
-    {
-      "id": "wall_5",
-      "type": "wall",
-      "start_point": {"x": 80, "y": 10},
-      "end_point": {"x": 80, "y": 40},
-      "width": 1.5
-    },
-    {
-      "id": "wall_5_deadend",
-      "type": "wall",
-      "start_point": {"x": 80, "y": 50},
-      "end_point": {"x": 80, "y": 65},
-      "width": 1.5
-    },
-    {
-      "id": "wall_5b",
-      "type": "wall",
-      "start_point": {"x": 80, "y": 75},
-      "end_point": {"x": 80, "y": 100},
-      "width": 1.5
-    },
-    {
-      "id": "container_1",
+      "id": "building_nw",
       "type": "rectangle",
-      "position": {"x": 12, "y": 35},
-      "size": {"width": 5, "height": 6}
+      "semantic_type": "building",
+      "position": {"x": 26, "y": 70},
+      "size": {"width": 18, "height": 20},
+      "properties": {"material": "concrete"}
     },
     {
-      "id": "container_2",
+      "id": "building_sw",
       "type": "rectangle",
-      "position": {"x": 12, "y": 70},
-      "size": {"width": 5, "height": 6}
+      "semantic_type": "building",
+      "position": {"x": 28, "y": 18},
+      "size": {"width": 20, "height": 18},
+      "properties": {"material": "concrete"}
     },
     {
-      "id": "container_3",
+      "id": "building_mid_north",
       "type": "rectangle",
-      "position": {"x": 42, "y": 25},
-      "size": {"width": 5, "height": 5}
+      "semantic_type": "building",
+      "position": {"x": 62, "y": 70},
+      "size": {"width": 22, "height": 18},
+      "properties": {"material": "glass"}
     },
     {
-      "id": "container_4",
+      "id": "building_mid_south",
       "type": "rectangle",
-      "position": {"x": 42, "y": 75},
-      "size": {"width": 5, "height": 5}
+      "semantic_type": "building",
+      "position": {"x": 66, "y": 18},
+      "size": {"width": 24, "height": 16},
+      "properties": {"material": "glass"}
     },
     {
-      "id": "container_5",
+      "id": "deadend_lane_top",
+      "type": "wall",
+      "semantic_type": "dead_end_wall",
+      "start_point": {"x": 82, "y": 50},
+      "end_point": {"x": 102, "y": 50},
+      "width": 1.6,
+      "properties": {"category": "dead_end"}
+    },
+    {
+      "id": "water_front",
+      "type": "polygon",
+      "semantic_type": "water",
+      "vertices": [
+        {"x": 42, "y": 34},
+        {"x": 64, "y": 32},
+        {"x": 70, "y": 44},
+        {"x": 58, "y": 56},
+        {"x": 40, "y": 50}
+      ],
+      "properties": {
+        "surface": "water",
+        "traversable": false,
+        "note": "Appears flat from the UAV perspective"
+      }
+    },
+    {
+      "id": "crawl_wall_1",
       "type": "rectangle",
-      "position": {"x": 72, "y": 30},
-      "size": {"width": 5, "height": 5}
+      "semantic_type": "crawl_under_wall",
+      "position": {"x": 52, "y": 62},
+      "size": {"width": 8, "height": 18},
+      "properties": {
+        "height": 1.2,
+        "bottom_clearance": 0.42,
+        "dog_passable": true,
+        "render": "dashed"
+      }
     },
     {
-      "id": "container_6",
-      "type": "rectangle",
-      "position": {"x": 72, "y": 70},
-      "size": {"width": 5, "height": 5}
-    },
-    {
-      "id": "debris_1",
-      "type": "circle",
-      "position": {"x": 28, "y": 85},
-      "size": {"radius": 1.5}
-    },
-    {
-      "id": "debris_2",
-      "type": "circle",
-      "position": {"x": 58, "y": 20},
-      "size": {"radius": 1.5}
-    },
-    {
-      "id": "debris_3",
-      "type": "circle",
-      "position": {"x": 58, "y": 80},
-      "size": {"radius": 1.5}
-    },
-    {
-      "id": "debris_4",
-      "type": "circle",
-      "position": {"x": 88, "y": 50},
-      "size": {"radius": 1.5}
+      "id": "crawl_wall_2",
+      "type": "wall",
+      "semantic_type": "low_wall",
+      "start_point": {"x": 88, "y": 32},
+      "end_point": {"x": 88, "y": 60},
+      "width": 2.2,
+      "properties": {
+        "height": 1.0,
+        "bottom_clearance": 0.38,
+        "dog_passable": true,
+        "render": "dashed"
+      }
     }
   ]
 }

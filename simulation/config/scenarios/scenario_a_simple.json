@@ -1,99 +1,81 @@
 {
-  "name": "Scenario: Urban City",
-  "description": "Urban city with complex building layout and dead-end alleys",
-  "map_size": {"x": 100, "y": 100},
-  "start": {"x": 10, "y": 50},
-  "goal": {"x": 90, "y": 50},
-  "perception_radius": 50,
-  "obstacles": [
+  "name": "Scenario A: Swamp Detour and Crawl Wall Shortcut",
+  "description": "UAV initially treats swamp as ground and low wall as solid; dog discovers swamp first, then low wall shortcut.",
+  "map_size": {"x": 100, "y": 70},
+  "start": {"x": 8, "y": 35},
+  "goal": {"x": 92, "y": 35},
+  "perception_radius": 12,
+  "physical_obstacles": [
     {
-      "id": "building_1",
+      "id": "north_block",
       "type": "rectangle",
-      "position": {"x": 20, "y": 15},
-      "size": {"width": 10, "height": 20}
+      "semantic_type": "building",
+      "position": {"x": 32, "y": 58},
+      "size": {"width": 22, "height": 16},
+      "properties": {"material": "concrete"}
     },
     {
-      "id": "building_2",
+      "id": "south_block",
       "type": "rectangle",
-      "position": {"x": 20, "y": 55},
-      "size": {"width": 10, "height": 25}
+      "semantic_type": "building",
+      "position": {"x": 32, "y": 12},
+      "size": {"width": 18, "height": 14},
+      "properties": {"material": "concrete"}
     },
     {
-      "id": "wall_deadend_1",
+      "id": "deadend_wall_top",
       "type": "wall",
-      "start_point": {"x": 35, "y": 0},
-      "end_point": {"x": 35, "y": 35},
-      "width": 1
+      "semantic_type": "dead_end_wall",
+      "start_point": {"x": 58, "y": 46},
+      "end_point": {"x": 58, "y": 66},
+      "width": 1.6,
+      "properties": {"category": "dead_end"}
     },
     {
-      "id": "wall_deadend_2",
+      "id": "deadend_wall_bottom",
       "type": "wall",
-      "start_point": {"x": 35, "y": 45},
-      "end_point": {"x": 35, "y": 70},
-      "width": 1
+      "semantic_type": "dead_end_wall",
+      "start_point": {"x": 58, "y": 4},
+      "end_point": {"x": 58, "y": 24},
+      "width": 1.6,
+      "properties": {"category": "dead_end"}
     },
     {
-      "id": "wall_deadend_3",
-      "type": "wall",
-      "start_point": {"x": 35, "y": 80},
-      "end_point": {"x": 35, "y": 100},
-      "width": 1
+      "id": "swamp_upper_route",
+      "type": "polygon",
+      "semantic_type": "swamp",
+      "vertices": [
+        {"x": 40, "y": 43},
+        {"x": 57, "y": 43},
+        {"x": 62, "y": 57},
+        {"x": 44, "y": 59}
+      ],
+      "properties": {
+        "surface": "swamp",
+        "traversable": false,
+        "note": "UAV top-view misclassifies it as normal ground"
+      }
     },
     {
-      "id": "building_3",
+      "id": "crawl_wall_center",
       "type": "rectangle",
-      "position": {"x": 50, "y": 30},
-      "size": {"width": 15, "height": 15}
+      "semantic_type": "crawl_under_wall",
+      "position": {"x": 52, "y": 34},
+      "size": {"width": 8, "height": 22},
+      "properties": {
+        "height": 1.1,
+        "bottom_clearance": 0.45,
+        "dog_passable": true,
+        "render": "dashed"
+      }
     },
     {
-      "id": "wall_deadend_4",
-      "type": "wall",
-      "start_point": {"x": 70, "y": 20},
-      "end_point": {"x": 70, "y": 55},
-      "width": 1
-    },
-    {
-      "id": "wall_deadend_5",
-      "type": "wall",
-      "start_point": {"x": 70, "y": 65},
-      "end_point": {"x": 70, "y": 100},
-      "width": 1
-    },
-    {
-      "id": "building_4",
+      "id": "service_room",
       "type": "rectangle",
-      "position": {"x": 80, "y": 15},
-      "size": {"width": 12, "height": 25}
-    },
-    {
-      "id": "building_5",
-      "type": "rectangle",
-      "position": {"x": 80, "y": 70},
-      "size": {"width": 12, "height": 20}
-    },
-    {
-      "id": "blocker_1",
-      "type": "rectangle",
-      "position": {"x": 42, "y": 15},
-      "size": {"width": 4, "height": 4}
-    },
-    {
-      "id": "blocker_2",
-      "type": "rectangle",
-      "position": {"x": 42, "y": 80},
-      "size": {"width": 4, "height": 4}
-    },
-    {
-      "id": "debris_1",
-      "type": "circle",
-      "position": {"x": 55, "y": 50},
-      "size": {"radius": 1.5}
-    },
-    {
-      "id": "debris_2",
-      "type": "circle",
-      "position": {"x": 75, "y": 60},
-      "size": {"radius": 1.5}
+      "semantic_type": "building",
+      "position": {"x": 76, "y": 14},
+      "size": {"width": 16, "height": 12},
+      "properties": {"material": "brick"}
     }
   ]
 }

@@ -1,60 +1,39 @@
-================================================================================
-UAV vs Dog Path Fusion Report
-================================================================================
+Scenario: Scenario A: Swamp Detour and Crawl Wall Shortcut
+Description: UAV initially treats swamp as ground and low wall as solid; dog discovers swamp first, then low wall shortcut.
+Map Size: 100 x 70
+Start: (8, 35)
+Goal: (92, 35)
+Perception Radius: 12
 
-Scenario: Scenario: Urban City
-Map Size: 100 x 100
-Perception Radius: 50m
-Start: (10, 50)
-Goal: (90, 50)
+=== Semantic Obstacles ===
+Crawl-under walls: ['crawl_wall_center']
+Swamp / quicksand / water: ['swamp_upper_route']
 
---------------------------------------------------
-UAV Path (Full Map)
---------------------------------------------------
-  path_length: 93.36
-  num_waypoints: 84
-  num_turns: 17
-  computation_time_ms: 426.552
-  smoothness: 0.453
-  optimality_ratio: 0.857
-  efficiency_ratio: 0.857
-  regions_crossed: 11
-  simplified_length: 91.39
-  simplified_points: 8
+=== Planning Summary ===
+P_0: length=87.04m, waypoints=4, turns=2, time=73.672ms, obstacles=6
+P_1: length=73.58m, waypoints=6, turns=4, time=51.103ms, obstacles=7
+P_2: length=56.04m, waypoints=2, turns=0, time=12.791ms, obstacles=6
 
---------------------------------------------------
-Dog Path (Partial Map)
---------------------------------------------------
-  Status: partial
-  Boundary Point: (60.00, 50.00)
-  Reason: Goal outside perception radius
-  path_length: 58.38
-  num_waypoints: 54
-  num_turns: 14
-  computation_time_ms: 41.39
-  smoothness: 0.476
-  optimality_ratio: 0.856
-  efficiency_ratio: 0.856
-  regions_crossed: 8
-  simplified_length: 56.56
-  simplified_points: 4
+=== Trigger Events ===
+E1 @ (28.36, 40.09)
+  source plan: P_0
+  triggered by: swamp_upper_route
+  visible ids: ['swamp_upper_route']
+    - packet swamp_upper_route: 沼泽
+      traversable=False
+      properties={'surface': 'swamp', 'traversable': False, 'note': 'UAV top-view misclassifies it as normal ground'}
 
---------------------------------------------------
-Fusion Decision
---------------------------------------------------
-  Selected Path: UAV
-  Reasons:
-    - Dog can only plan to boundary, use UAV full path
-    - Goal outside perception radius
+E2 @ (36.00, 33.14)
+  source plan: P_1
+  triggered by: crawl_wall_center
+  visible ids: ['crawl_wall_center']
+    - packet crawl_wall_center: 可钻行矮墙
+      traversable=True
+      properties={'height': 1.1, 'bottom_clearance': 0.45, 'dog_passable': True, 'render': 'dashed'}
 
-  Final Path Metrics:
-    path_length: 93.36
-    num_waypoints: 84
-    num_turns: 17
-    computation_time_ms: 426.552
-    smoothness: 0.453
-    optimality_ratio: 0.857
-    efficiency_ratio: 0.857
-    regions_crossed: 11
-    simplified_length: 91.39
-    simplified_points: 8
+=== Final Result ===
+Success: True
+Discovered semantic obstacle ids: ['crawl_wall_center', 'swamp_upper_route']
+Executed trace length: 88.07m
+Initial path length: 87.04m
+Final path length: 56.04m

@@ -1,159 +1,86 @@
 {
-  "name": "Scenario: Narrow Alley",
-  "description": "Complex narrow alley with multiple dead ends and traps",
-  "map_size": {"x": 100, "y": 100},
-  "start": {"x": 5, "y": 50},
-  "goal": {"x": 95, "y": 50},
-  "perception_radius": 50,
-  "obstacles": [
+  "name": "Scenario B: Dead-End Maze with Hidden Quicksand",
+  "description": "A maze first lures the UAV upward into a hidden quicksand corridor; after correction the dog reroutes and may later exploit a low wall shortcut.",
+  "map_size": {"x": 100, "y": 90},
+  "start": {"x": 8, "y": 45},
+  "goal": {"x": 94, "y": 45},
+  "perception_radius": 10,
+  "physical_obstacles": [
     {
-      "id": "wall_1",
+      "id": "maze_wall_1_lower",
       "type": "wall",
-      "start_point": {"x": 15, "y": 0},
-      "end_point": {"x": 15, "y": 40},
-      "width": 1.5
+      "semantic_type": "dead_end_wall",
+      "start_point": {"x": 20, "y": 0},
+      "end_point": {"x": 20, "y": 32},
+      "width": 1.6,
+      "properties": {"category": "maze"}
     },
     {
-      "id": "wall_1_deadend",
+      "id": "maze_wall_1_upper",
       "type": "wall",
-      "start_point": {"x": 15, "y": 50},
-      "end_point": {"x": 15, "y": 65},
-      "width": 1.5
+      "semantic_type": "dead_end_wall",
+      "start_point": {"x": 20, "y": 48},
+      "end_point": {"x": 20, "y": 90},
+      "width": 1.6,
+      "properties": {"category": "maze"}
     },
     {
-      "id": "wall_2",
+      "id": "maze_wall_2",
       "type": "wall",
-      "start_point": {"x": 15, "y": 75},
-      "end_point": {"x": 15, "y": 100},
-      "width": 1.5
+      "semantic_type": "dead_end_wall",
+      "start_point": {"x": 42, "y": 0},
+      "end_point": {"x": 42, "y": 70},
+      "width": 1.6,
+      "properties": {"category": "maze"}
     },
     {
-      "id": "wall_3",
+      "id": "deadend_branch",
       "type": "wall",
-      "start_point": {"x": 30, "y": 15},
-      "end_point": {"x": 30, "y": 50},
-      "width": 1.5
+      "semantic_type": "dead_end_wall",
+      "start_point": {"x": 42, "y": 70},
+      "end_point": {"x": 56, "y": 70},
+      "width": 1.6,
+      "properties": {"category": "dead_end"}
     },
     {
-      "id": "wall_3_deadend",
+      "id": "crawl_wall_exit",
       "type": "wall",
-      "start_point": {"x": 30, "y": 60},
-      "end_point": {"x": 30, "y": 75},
-      "width": 1.5
+      "semantic_type": "low_wall",
+      "start_point": {"x": 62, "y": 18},
+      "end_point": {"x": 62, "y": 72},
+      "width": 2.4,
+      "properties": {
+        "height": 1.0,
+        "bottom_clearance": 0.4,
+        "dog_passable": true,
+        "render": "dashed"
+      }
     },
     {
-      "id": "wall_4",
+      "id": "maze_wall_3",
       "type": "wall",
-      "start_point": {"x": 30, "y": 85},
-      "end_point": {"x": 30, "y": 100},
-      "width": 1.5
+      "semantic_type": "dead_end_wall",
+      "start_point": {"x": 82, "y": 26},
+      "end_point": {"x": 82, "y": 90},
+      "width": 1.6,
+      "properties": {"category": "maze"}
     },
     {
-      "id": "wall_5",
-      "type": "wall",
-      "start_point": {"x": 45, "y": 0},
-      "end_point": {"x": 45, "y": 30},
-      "width": 1.5
-    },
-    {
-      "id": "wall_5_deadend",
-      "type": "wall",
-      "start_point": {"x": 45, "y": 40},
-      "end_point": {"x": 45, "y": 60},
-      "width": 1.5
-    },
-    {
-      "id": "wall_6",
-      "type": "wall",
-      "start_point": {"x": 45, "y": 70},
-      "end_point": {"x": 45, "y": 100},
-      "width": 1.5
-    },
-    {
-      "id": "wall_7",
-      "type": "wall",
-      "start_point": {"x": 60, "y": 20},
-      "end_point": {"x": 60, "y": 55},
-      "width": 1.5
-    },
-    {
-      "id": "wall_7_deadend",
-      "type": "wall",
-      "start_point": {"x": 60, "y": 65},
-      "end_point": {"x": 60, "y": 80},
-      "width": 1.5
-    },
-    {
-      "id": "wall_8",
-      "type": "wall",
-      "start_point": {"x": 60, "y": 90},
-      "end_point": {"x": 60, "y": 100},
-      "width": 1.5
-    },
-    {
-      "id": "wall_9",
-      "type": "wall",
-      "start_point": {"x": 75, "y": 0},
-      "end_point": {"x": 75, "y": 35},
-      "width": 1.5
-    },
-    {
-      "id": "wall_9_deadend",
-      "type": "wall",
-      "start_point": {"x": 75, "y": 45},
-      "end_point": {"x": 75, "y": 65},
-      "width": 1.5
-    },
-    {
-      "id": "wall_10",
-      "type": "wall",
-      "start_point": {"x": 75, "y": 75},
-      "end_point": {"x": 75, "y": 100},
-      "width": 1.5
-    },
-    {
-      "id": "wall_11",
-      "type": "wall",
-      "start_point": {"x": 90, "y": 25},
-      "end_point": {"x": 90, "y": 60},
-      "width": 1.5
-    },
-    {
-      "id": "wall_11_deadend",
-      "type": "wall",
-      "start_point": {"x": 90, "y": 70},
-      "end_point": {"x": 90, "y": 85},
-      "width": 1.5
-    },
-    {
-      "id": "blocker_1",
-      "type": "rectangle",
-      "position": {"x": 22, "y": 45},
-      "size": {"width": 4, "height": 4}
-    },
-    {
-      "id": "blocker_2",
-      "type": "rectangle",
-      "position": {"x": 52, "y": 35},
-      "size": {"width": 4, "height": 4}
-    },
-    {
-      "id": "debris_1",
-      "type": "circle",
-      "position": {"x": 38, "y": 85},
-      "size": {"radius": 1.5}
-    },
-    {
-      "id": "debris_2",
-      "type": "circle",
-      "position": {"x": 68, "y": 20},
-      "size": {"radius": 1.5}
-    },
-    {
-      "id": "debris_3",
-      "type": "circle",
-      "position": {"x": 82, "y": 75},
-      "size": {"radius": 1.5}
+      "id": "quicksand_trap",
+      "type": "polygon",
+      "semantic_type": "quicksand",
+      "vertices": [
+        {"x": 48, "y": 66},
+        {"x": 62, "y": 66},
+        {"x": 68, "y": 78},
+        {"x": 58, "y": 84},
+        {"x": 46, "y": 78}
+      ],
+      "properties": {
+        "surface": "quicksand",
+        "traversable": false,
+        "note": "UAV cannot distinguish material from top view"
+      }
     }
   ]
 }

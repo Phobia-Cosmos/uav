@@ -59,6 +59,13 @@ class AStar:
         self.obstacles = obstacles
         self.heuristic_weight = heuristic_weight
 
+    def _world_to_grid(self, point: Tuple[float, float]) -> Tuple[int, int]:
+        grid_x = int(round(point[0] / self.resolution))
+        grid_y = int(round(point[1] / self.resolution))
+        grid_x = min(max(grid_x, 0), self.width - 1)
+        grid_y = min(max(grid_y, 0), self.height - 1)
+        return grid_x, grid_y
+
     def heuristic(self, node: Tuple[int, int],
                   goal: Tuple[int, int],
                   method: str = "manhattan") -> float:
@@ -155,14 +162,10 @@ class AStar:
         Returns:
             路径数据字典，或 None
         """
-        start_node = AStarNode(
-            x=int(start[0] / self.resolution),
-            y=int(start[1] / self.resolution)
-        )
-        goal_node = AStarNode(
-            x=int(goal[0] / self.resolution),
-            y=int(goal[1] / self.resolution)
-        )
+        start_grid = self._world_to_grid(start)
+        goal_grid = self._world_to_grid(goal)
+        start_node = AStarNode(x=start_grid[0], y=start_grid[1])
+        goal_node = AStarNode(x=goal_grid[0], y=goal_grid[1])
 
         if self.is_collision((start_node.x, start_node.y)):
             return None

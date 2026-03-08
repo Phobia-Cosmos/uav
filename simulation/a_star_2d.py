@@ -33,13 +33,15 @@ class AStar2D(AStar):
              goal: Tuple[float, float],
              inflate_radius: int = 0) -> Optional[Dict]:
         """执行 2D A* 路径规划。"""
+        start_grid = self._world_to_grid(start)
+        goal_grid = self._world_to_grid(goal)
         start_node = AStarNode(
-            x=int(start[0] / self.resolution),
-            y=int(start[1] / self.resolution)
+            x=start_grid[0],
+            y=start_grid[1]
         )
         goal_node = AStarNode(
-            x=int(goal[0] / self.resolution),
-            y=int(goal[1] / self.resolution)
+            x=goal_grid[0],
+            y=goal_grid[1]
         )
 
         if self.is_collision((start_node.x, start_node.y)):
@@ -125,49 +127,58 @@ class AStar2D(AStar):
 
         inflated: Set[Tuple[int, int]] = set()
         for obstacle in self.obstacles:
-            if obstacle.type == "rectangle":
-                width = int(obstacle.size["width"] / self.resolution) + 2 * radius
-                height = int(obstacle.size["height"] / self.resolution) + 2 * radius
-                obstacle_x = int(obstacle.position.x / self.resolution)
-                obstacle_y = int(obstacle.position.y / self.resolution)
-
-                for x in range(obstacle_x - width // 2 - radius, obstacle_x + width // 2 + radius + 1):
-                    for y in range(obstacle_y - height // 2 - radius, obstacle_y + height // 2 + radius + 1):
-                        if 0 <= x < self.width and 0 <= y < self.height:
-                            inflated.add((x, y))
-
-            elif obstacle.type == "circle":
-                radius_grid = int(obstacle.size["radius"] / self.resolution) + radius
-                obstacle_x = int(obstacle.position.x / self.resolution)
-                obstacle_y = int(obstacle.position.y / self.resolution)
-
-                for x in range(obstacle_x - radius_grid - radius, obstacle_x + radius_grid + radius + 1):
-                    for y in range(obstacle_y - radius_grid - radius, obstacle_y + radius_grid + radius + 1):
-                        if 0 <= x < self.width and 0 <= y < self.height:
-                            if (x - obstacle_x) ** 2 + (y - obstacle_y) ** 2 <= (radius_grid + radius) ** 2:
-                                inflated.add((x, y))
-
-            elif obstacle.type == "wall":
-                if obstacle.end_point is None:
-                    continue
-
-                min_x = int(min(obstacle.position.x, obstacle.end_point.x) / self.resolution) - radius - 1
-                max_x = int(max(obstacle.position.x, obstacle.end_point.x) / self.resolution) + radius + 1
-                min_y = int(min(obstacle.position.y, obstacle.end_point.y) / self.resolution) - radius - 1
-                max_y = int(max(obstacle.position.y, obstacle.end_point.y) / self.resolution) + radius + 1
-
-                wall_margin = obstacle.size.get("width", 1) / 2 + radius * self.resolution
-                for x in range(max(0, min_x), min(self.width, max_x + 1)):
-                    for y in range(max(0, min_y), min(self.height, max_y + 1)):
-                        world_x = x * self.resolution
-                        world_y = y * self.resolution
-                        if obstacle._point_to_segment_distance(world_x, world_y) <= wall_margin:
-                            inflated.add((x, y))
+            min_x, max_x, min_y, max_y = self._obstacle_bounds(obstacle, radius)
+            for x in range(max(0, min_x), min(self.width, max_x + 1)):
+                for y in range(max(0, min_y), min(self.height, max_y + 1)):
+                    world_x = x * self.resolution
+                    world_y = y * self.resolution
+                    if obstacle.distance_to_point((world_x, world_y)) <= radius * self.resolution:
+                        inflated.add((x, y))
 
         return inflated
 
     def _is_in_inflated(self, x: int, y: int, inflated: Set[Tuple[int, int]]) -> bool:
         return (x, y) in inflated
+
+    def _obstacle_bounds(self, obstacle: Obstacle2D, radius: int) -> Tuple[int, int, int, int]:
+        padding = radius + 2
+
+        if obstacle.type == "rectangle":
+            half_width = obstacle.size["width"] / 2
+            half_height = obstacle.size["height"] / 2
+            min_x = int((obstacle.position.x - half_width) / self.resolution) - padding
+            max_x = int((obstacle.position.x + half_width) / self.resolution) + padding
+            min_y = int((obstacle.position.y - half_height) / self.resolution) - padding
+            max_y = int((obstacle.position.y + half_height) / self.resolution) + padding
+            return min_x, max_x, min_y, max_y
+
+        if obstacle.type == "circle":
+            obstacle_radius = obstacle.size["radius"]
+            min_x = int((obstacle.position.x - obstacle_radius) / self.resolution) - padding
+            max_x = int((obstacle.position.x + obstacle_radius) / self.resolution) + padding
+            min_y = int((obstacle.position.y - obstacle_radius) / self.resolution) - padding
+            max_y = int((obstacle.position.y + obstacle_radius) / self.resolution) + padding
+            return min_x, max_x, min_y, max_y
+
+        if obstacle.type == "wall" and obstacle.end_point is not None:
+            min_x = int(min(obstacle.position.x, obstacle.end_point.x) / self.resolution) - padding
+            max_x = int(max(obstacle.position.x, obstacle.end_point.x) / self.resolution) + padding
+            min_y = int(min(obstacle.position.y, obstacle.end_point.y) / self.resolution) - padding
+            max_y = int(max(obstacle.position.y, obstacle.end_point.y) / self.resolution) + padding
+            return min_x, max_x, min_y, max_y
+
+        if obstacle.type == "polygon" and obstacle.vertices:
+            xs = [vertex.x for vertex in obstacle.vertices]
+            ys = [vertex.y for vertex in obstacle.vertices]
+            min_x = int(min(xs) / self.resolution) - padding
+            max_x = int(max(xs) / self.resolution) + padding
+            min_y = int(min(ys) / self.resolution) - padding
+            max_y = int(max(ys) / self.resolution) + padding
+            return min_x, max_x, min_y, max_y
+
+        fallback_x = int(obstacle.position.x / self.resolution)
+        fallback_y = int(obstacle.position.y / self.resolution)
+        return fallback_x - padding, fallback_x + padding, fallback_y - padding, fallback_y + padding
 
 
 def main():

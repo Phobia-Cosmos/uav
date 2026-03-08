@@ -1,60 +1,39 @@
-================================================================================
-UAV vs Dog Path Fusion Report
-================================================================================
+Scenario: Scenario B: Dead-End Maze with Hidden Quicksand
+Description: A maze first lures the UAV upward into a hidden quicksand corridor; after correction the dog reroutes and may later exploit a low wall shortcut.
+Map Size: 100 x 90
+Start: (8, 45)
+Goal: (94, 45)
+Perception Radius: 10
 
-Scenario: Scenario: Narrow Alley
-Map Size: 100 x 100
-Perception Radius: 50m
-Start: (5, 50)
-Goal: (95, 50)
+=== Semantic Obstacles ===
+Crawl-under walls: ['crawl_wall_exit']
+Swamp / quicksand / water: ['quicksand_trap']
 
---------------------------------------------------
-UAV Path (Full Map)
---------------------------------------------------
-  path_length: 107.6
-  num_waypoints: 97
-  num_turns: 26
-  computation_time_ms: 2139.081
-  smoothness: 0.478
-  optimality_ratio: 0.836
-  efficiency_ratio: 0.836
-  regions_crossed: 14
-  simplified_length: 105.09
-  simplified_points: 11
+=== Planning Summary ===
+P_0: length=141.6m, waypoints=11, turns=6, time=442.937ms, obstacles=6
+P_1: length=118.56m, waypoints=9, turns=6, time=266.643ms, obstacles=7
+P_2: length=87.82m, waypoints=6, turns=3, time=142.852ms, obstacles=6
 
---------------------------------------------------
-Dog Path (Partial Map)
---------------------------------------------------
-  Status: partial
-  Boundary Point: (55.00, 50.00)
-  Reason: Goal outside perception radius
-  path_length: 50.0
-  num_waypoints: 51
-  num_turns: 0
-  computation_time_ms: 3.879
-  smoothness: 1
-  optimality_ratio: 1.0
-  efficiency_ratio: 1.0
-  regions_crossed: 6
-  simplified_length: 50.0
-  simplified_points: 2
+=== Trigger Events ===
+E1 @ (37.78, 66.46)
+  source plan: P_0
+  triggered by: quicksand_trap
+  visible ids: ['quicksand_trap']
+    - packet quicksand_trap: 流沙
+      traversable=False
+      properties={'surface': 'quicksand', 'traversable': False, 'note': 'UAV cannot distinguish material from top view'}
 
---------------------------------------------------
-Fusion Decision
---------------------------------------------------
-  Selected Path: UAV
-  Reasons:
-    - Dog can only plan to boundary, use UAV full path
-    - Goal outside perception radius
+E2 @ (59.82, 82.99)
+  source plan: P_1
+  triggered by: crawl_wall_exit
+  visible ids: ['crawl_wall_exit']
+    - packet crawl_wall_exit: 可钻行矮墙
+      traversable=True
+      properties={'height': 1.0, 'bottom_clearance': 0.4, 'dog_passable': True, 'render': 'dashed'}
 
-  Final Path Metrics:
-    path_length: 107.6
-    num_waypoints: 97
-    num_turns: 26
-    computation_time_ms: 2139.081
-    smoothness: 0.478
-    optimality_ratio: 0.836
-    efficiency_ratio: 0.836
-    regions_crossed: 14
-    simplified_length: 105.09
-    simplified_points: 11
+=== Final Result ===
+Success: True
+Discovered semantic obstacle ids: ['crawl_wall_exit', 'quicksand_trap']
+Executed trace length: 157.59m
+Initial path length: 141.6m
+Final path length: 87.82m

@@ -47,23 +47,32 @@ class Point3D:
 class Obstacle2D:
     """2D 障碍物 (机器狗)"""
     id: str
-    type: str  # "rectangle", "circle", or "wall"
+    type: str  # "rectangle", "circle", "wall", or "polygon"
     position: Point2D
     size: Dict[str, float]  # {"width": x, "height": y} 或 {"radius": r} 或 {"width": w}
     end_point: Optional[Point2D] = field(default=None)
+    vertices: List[Point2D] = field(default_factory=list)
     uav_passable: bool = field(default=False)
+    semantic_type: str = field(default="generic")
+    properties: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict:
         result = {
             "id": self.id,
             "type": self.type,
             "position": self.position.to_dict(),
-            "size": self.size
+            "size": self.size,
         }
         if self.end_point:
             result["end_point"] = self.end_point.to_dict()
+        if self.vertices:
+            result["vertices"] = [vertex.to_dict() for vertex in self.vertices]
         if self.uav_passable:
             result["uav_passable"] = True
+        if self.semantic_type != "generic":
+            result["semantic_type"] = self.semantic_type
+        if self.properties:
+            result["properties"] = self.properties
         return result
 
     @classmethod
@@ -72,18 +81,36 @@ class Obstacle2D:
             position = Point2D.from_dict(data["start_point"])
             end_point = Point2D.from_dict(data["end_point"])
             size = {"width": data.get("width", 1)}
+            vertices = []
+        elif data["type"] == "polygon":
+            vertices = [Point2D.from_dict(vertex) for vertex in data["vertices"]]
+            position = cls._polygon_centroid(vertices)
+            end_point = None
+            size = data.get("size", {})
         else:
             position = Point2D.from_dict(data["position"])
             end_point = None
             size = data["size"]
+            vertices = []
         return cls(
             id=data["id"],
             type=data["type"],
             position=position,
             size=size,
             end_point=end_point,
-            uav_passable=data.get("uav_passable", False)
+            vertices=vertices,
+            uav_passable=data.get("uav_passable", False),
+            semantic_type=data.get("semantic_type", "generic"),
+            properties=data.get("properties", {})
         )
+
+    @staticmethod
+    def _polygon_centroid(vertices: List['Point2D']) -> 'Point2D':
+        if not vertices:
+            return Point2D(0.0, 0.0)
+        x = sum(vertex.x for vertex in vertices) / len(vertices)
+        y = sum(vertex.y for vertex in vertices) / len(vertices)
+        return Point2D(x=x, y=y)
 
     def contains(self, point: Tuple[float, float]) -> bool:
         """检查点是否在障碍物内"""
@@ -102,7 +129,37 @@ class Obstacle2D:
             if self.end_point is None:
                 return False
             return self._point_to_segment_distance(px, py) <= self.size.get("width", 1) / 2
+        elif self.type == "polygon":
+            return self._point_in_polygon(px, py)
         return False
+
+    def distance_to_point(self, point: Tuple[float, float]) -> float:
+        """计算点到障碍物占据区域的最短距离。"""
+        px, py = point
+        ox, oy = self.position.x, self.position.y
+
+        if self.type == "rectangle":
+            width = self.size["width"]
+            height = self.size["height"]
+            dx = max(abs(px - ox) - width / 2, 0)
+            dy = max(abs(py - oy) - height / 2, 0)
+            return math.sqrt(dx * dx + dy * dy)
+
+        if self.type == "circle":
+            radius = self.size["radius"]
+            center_distance = math.sqrt((px - ox) ** 2 + (py - oy) ** 2)
+            return max(0.0, center_distance - radius)
+
+        if self.type == "wall":
+            wall_distance = self._point_to_segment_distance(px, py)
+            return max(0.0, wall_distance - self.size.get("width", 1) / 2)
+
+        if self.type == "polygon":
+            if self._point_in_polygon(px, py):
+                return 0.0
+            return self._distance_to_polygon_edges(px, py)
+
+        return float('inf')
 
     def _point_to_segment_distance(self, px: float, py: float) -> float:
         """计算点到线段的距离"""
@@ -125,6 +182,49 @@ class Obstacle2D:
         closest_y = y1 + t * dy
         
         return math.sqrt((px - closest_x)**2 + (py - closest_y)**2)
+
+    def _point_in_polygon(self, px: float, py: float) -> bool:
+        if len(self.vertices) < 3:
+            return False
+
+        inside = False
+        j = len(self.vertices) - 1
+        for i, vertex in enumerate(self.vertices):
+            prev = self.vertices[j]
+            intersects = ((vertex.y > py) != (prev.y > py)) and (
+                px < (prev.x - vertex.x) * (py - vertex.y) / ((prev.y - vertex.y) or 1e-9) + vertex.x
+            )
+            if intersects:
+                inside = not inside
+            j = i
+        return inside
+
+    def _distance_to_polygon_edges(self, px: float, py: float) -> float:
+        if len(self.vertices) < 2:
+            return float('inf')
+
+        min_distance = float('inf')
+        for index, start in enumerate(self.vertices):
+            end = self.vertices[(index + 1) % len(self.vertices)]
+            distance = self._point_to_custom_segment_distance(px, py, start.x, start.y, end.x, end.y)
+            min_distance = min(min_distance, distance)
+        return min_distance
+
+    @staticmethod
+    def _point_to_custom_segment_distance(px: float, py: float,
+                                          x1: float, y1: float,
+                                          x2: float, y2: float) -> float:
+        dx = x2 - x1
+        dy = y2 - y1
+        length_sq = dx * dx + dy * dy
+
+        if length_sq == 0:
+            return math.sqrt((px - x1) ** 2 + (py - y1) ** 2)
+
+        t = max(0, min(1, ((px - x1) * dx + (py - y1) * dy) / length_sq))
+        closest_x = x1 + t * dx
+        closest_y = y1 + t * dy
+        return math.sqrt((px - closest_x) ** 2 + (py - closest_y) ** 2)
 
 
 @dataclass

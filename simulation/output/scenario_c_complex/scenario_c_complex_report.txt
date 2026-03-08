@@ -1,60 +1,39 @@
-================================================================================
-UAV vs Dog Path Fusion Report
-================================================================================
+Scenario: Scenario C: Urban Mixed Terrain
+Description: Urban blocks, a water surface and multiple crawl-under walls create repeated tangent-trigger replanning events.
+Map Size: 120 x 90
+Start: (10, 45)
+Goal: (110, 45)
+Perception Radius: 14
 
-Scenario: Scenario: Industrial Alley
-Map Size: 100 x 100
-Perception Radius: 50m
-Start: (10, 50)
-Goal: (90, 50)
+=== Semantic Obstacles ===
+Crawl-under walls: ['crawl_wall_1', 'crawl_wall_2']
+Swamp / quicksand / water: ['water_front']
 
---------------------------------------------------
-UAV Path (Full Map)
---------------------------------------------------
-  path_length: 88.04
-  num_waypoints: 82
-  num_turns: 20
-  computation_time_ms: 1205.878
-  smoothness: 0.469
-  optimality_ratio: 0.909
-  efficiency_ratio: 0.909
-  regions_crossed: 11
-  simplified_length: 85.83
-  simplified_points: 7
+=== Planning Summary ===
+P_0: length=106.06m, waypoints=3, turns=1, time=142.542ms, obstacles=7
+P_1: length=90.08m, waypoints=4, turns=2, time=71.169ms, obstacles=8
+P_2: length=39.56m, waypoints=2, turns=0, time=26.719ms, obstacles=7
 
---------------------------------------------------
-Dog Path (Partial Map)
---------------------------------------------------
-  Status: partial
-  Boundary Point: (60.00, 50.00)
-  Reason: Goal outside perception radius
-  path_length: 50.0
-  num_waypoints: 51
-  num_turns: 0
-  computation_time_ms: 4.765
-  smoothness: 1
-  optimality_ratio: 1.0
-  efficiency_ratio: 1.0
-  regions_crossed: 6
-  simplified_length: 50.0
-  simplified_points: 2
+=== Trigger Events ===
+E1 @ (26.92, 41.75)
+  source plan: P_0
+  triggered by: water_front
+  visible ids: ['water_front']
+    - packet water_front: 水面
+      traversable=False
+      properties={'surface': 'water', 'traversable': False, 'note': 'Appears flat from the UAV perspective'}
 
---------------------------------------------------
-Fusion Decision
---------------------------------------------------
-  Selected Path: UAV
-  Reasons:
-    - Dog can only plan to boundary, use UAV full path
-    - Goal outside perception radius
+E2 @ (72.93, 31.00)
+  source plan: P_1
+  triggered by: crawl_wall_2
+  visible ids: ['crawl_wall_2']
+    - packet crawl_wall_2: 可钻行矮墙
+      traversable=True
+      properties={'height': 1.0, 'bottom_clearance': 0.38, 'dog_passable': True, 'render': 'dashed'}
 
-  Final Path Metrics:
-    path_length: 88.04
-    num_waypoints: 82
-    num_turns: 20
-    computation_time_ms: 1205.878
-    smoothness: 0.469
-    optimality_ratio: 0.909
-    efficiency_ratio: 0.909
-    regions_crossed: 11
-    simplified_length: 85.83
-    simplified_points: 7
+=== Final Result ===
+Success: True
+Discovered semantic obstacle ids: ['crawl_wall_2', 'water_front']
+Executed trace length: 105.48m
+Initial path length: 106.06m
+Final path length: 39.56m

@@ -1,603 +1,592 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Path Fusion Main Program
+Ground-Air semantic fusion simulation.
 
-Path fusion implementation for UAV and Dog cooperation.
-Dog perception radius: R = min(W, H) / 2
+核心机制：
+1. 无人机先在“透视地图”上做全局规划；
+2. 机器狗沿路径前进；
+3. 当视域圆与未知特殊地形/障碍物相切时立即暂停；
+4. 上传真实几何与语义；
+5. 无人机修正融合地图并重新规划；
+6. 机器狗继续沿新路径前进。
 """
 
-import sys
-import os
+from __future__ import annotations
+
 import json
-import time
 import math
-import random
-from typing import Dict, List, Tuple, Optional
-from dataclasses import dataclass
+import os
+import time
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Sequence, Set, Tuple
 
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
-sys.path.insert(0, os.path.dirname(__file__))
-
-from map_generator import Obstacle2D
 from algorithm.a_star import AStar
-from algorithm.perception_radius import (
-    generate_dog_map,
-    calculate_perception_boundary,
-    Point
-)
-from algorithm.path_optimizer import rdp_simplify
 from evaluation.metrics import PathMetrics
+from semantic_maps import (
+    CRAWL_TYPES,
+    SWAMP_TYPES,
+    build_discovered_semantic_map,
+    build_fused_planning_obstacles,
+    build_fused_visual_obstacles,
+    build_semantic_packet,
+    build_uav_perspective_obstacles,
+    clip_path_to_trigger,
+    find_next_trigger,
+    get_physical_obstacles,
+    merge_trace,
+    obstacle_semantic_type,
+    obstacle_visible_from_position,
+    simplify_path_with_line_of_sight,
+)
+from map_generator import Obstacle2D
 
 
 COLORS = {
-    'wall': '#8B4513',
-    'building': '#CD853F',
-    'debris': '#708090',
-    'tree': '#228B22',
-    'start': '#00FF00',
-    'goal': '#FF0000',
-    'uav': '#0066CC',
-    'dog': '#FF6600',
-    'background': '#F5F5DC',
-    'boundary': '#9932CC',
-    'final': '#00CC00',
-    'hidden': '#AAAAAA',
-    'mosaic': '#CCCCCC'
+    'background': '#FAF8F2',
+    'building': '#8D6E63',
+    'wall': '#6D4C41',
+    'debris': '#78909C',
+    'swamp_fill': '#4DB6AC',
+    'swamp_edge': '#00695C',
+    'crawl_fill': '#E0E0E0',
+    'crawl_edge': '#616161',
+    'start': '#2E7D32',
+    'goal': '#C62828',
+    'initial_path': '#1565C0',
+    'replanned_path': '#8E24AA',
+    'final_path': '#EF6C00',
+    'executed': '#00A86B',
+    'circle': '#AB47BC',
+    'event': '#D81B60',
 }
 
 
 @dataclass
-class PathResult:
-    status: str
-    points: List[Dict]
-    metrics: Dict
-    boundary_point: Optional[Dict] = None
-    reason: str = ""
+class PlanSnapshot:
+    label: str
+    start: Dict[str, float]
+    goal: Dict[str, float]
+    points: List[Dict[str, float]]
+    metrics: Dict[str, float]
+    obstacle_count: int
+
+
+@dataclass
+class TriggerEvent:
+    index: int
+    stop_point: Dict[str, float]
+    triggered_obstacle_id: str
+    uploaded_packets: List[Dict]
+    visible_ids: List[str]
+    source_plan: str
+
+
+@dataclass
+class ScenarioResult:
+    config: Dict
+    initial_plan: Optional[PlanSnapshot]
+    plans: List[PlanSnapshot] = field(default_factory=list)
+    events: List[TriggerEvent] = field(default_factory=list)
+    executed_trace: List[Dict[str, float]] = field(default_factory=list)
+    discovered_ids: Set[str] = field(default_factory=set)
+    success: bool = False
+    failure_reason: str = ""
+
+    @property
+    def final_plan(self) -> Optional[PlanSnapshot]:
+        return self.plans[-1] if self.plans else None
 
 
 def load_scenario(filepath: str) -> Dict:
-    with open(filepath, 'r') as f:
-        return json.load(f)
+    with open(filepath, 'r', encoding='utf-8') as file:
+        return json.load(file)
 
 
-def draw_obstacle(ax, obs: Dict):
-    obs_type = obs.get('type', 'rectangle')
-
-    if obs_type == 'rectangle':
-        x, y = obs['position']['x'], obs['position']['y']
-        w, h = obs['size']['width'], obs['size']['height']
-        rect = plt.Rectangle(
-            (x - w/2, y - h/2), w, h,
-            facecolor=COLORS.get('building'),
-            edgecolor='black', linewidth=2, alpha=0.8
-        )
-        ax.add_patch(rect)
-
-    elif obs_type == 'circle':
-        x, y = obs['position']['x'], obs['position']['y']
-        r = obs['size']['radius']
-        circle = plt.Circle((x, y), r, facecolor=COLORS.get('debris'),
-                           edgecolor='black', linewidth=2, alpha=0.8)
-        ax.add_patch(circle)
-
-    elif obs_type == 'wall':
-        x1, y1 = obs['start_point']['x'], obs['start_point']['y']
-        x2, y2 = obs['end_point']['x'], obs['end_point']['y']
-        width = obs.get('width', 1)
-
-        dx, dy = x2 - x1, y2 - y1
-        length = (dx**2 + dy**2)**0.5
-        if length < 0.001:
-            return
-
-        nx, ny = -dy/length * width/2, dx/length * width/2
-        polygon = plt.Polygon(
-            [(x1+nx, y1+ny), (x2+nx, y2+ny), (x2-nx, y2-ny), (x1-nx, y1-ny)],
-            facecolor=COLORS.get('wall'), edgecolor='black',
-            linewidth=2, alpha=0.9
-        )
-        ax.add_patch(polygon)
-
-
-def draw_mosaic_region(ax, center: Tuple[float, float], radius: float, map_size: Tuple[float, float]):
-    """
-    Draw mosaic/hatched region to represent invisible areas (OUTSIDE the perception radius).
-    Only the area outside the circle is drawn with mosaic pattern.
-    """
-    x_center, y_center = center
-    map_width, map_height = map_size
-    
-    num_segments = 60
-    
-    for i in range(num_segments):
-        angle1 = 2 * math.pi * i / num_segments
-        angle2 = 2 * math.pi * (i + 1) / num_segments
-        
-        cos1, sin1 = math.cos(angle1), math.sin(angle1)
-        cos2, sin2 = math.cos(angle2), math.sin(angle2)
-        
-        x1 = x_center + radius * cos1
-        y1 = y_center + radius * sin1
-        x2 = x_center + radius * cos2
-        y2 = y_center + radius * sin2
-        
-        mid_angle = (angle1 + angle2) / 2
-        extended_r = radius + max(map_width, map_height)
-        x_ext = x_center + extended_r * math.cos(mid_angle)
-        y_ext = y_center + extended_r * math.sin(mid_angle)
-        
-        vertices = [
-            (x1, y1),
-            (x2, y2),
-            (x_ext, y_ext)
-        ]
-        
-        gray_value = 0.65 + random.random() * 0.15
-        color = str(gray_value)
-        alpha = 0.35 + random.random() * 0.15
-        
-        polygon = plt.Polygon(vertices, facecolor=color,
-                             edgecolor='#666666', linewidth=0.5,
-                             alpha=alpha, zorder=0, hatch='///')
-        ax.add_patch(polygon)
-    
-    circle = plt.Circle((x_center, y_center), radius, fill=False, 
-                        color=COLORS['boundary'],
-                        linewidth=3, linestyle='--', zorder=2)
-    ax.add_patch(circle)
-
-
-def run_path_planning(obstacles: List[Dict], map_size: Tuple,
-                      start: Tuple, goal: Tuple, agent_type: str) -> PathResult:
-    """Run path planning"""
-    print(f"\n  [{agent_type}] Start: {start}, Goal: {goal}")
-    print(f"  [{agent_type}] Obstacles: {len(obstacles)}")
-
-    obs_objects = [Obstacle2D.from_dict(obs) for obs in obstacles]
-    planner = AStar(obs_objects, map_size)
-
+def plan_route(start: Tuple[float, float],
+               goal: Tuple[float, float],
+               obstacles: List[Dict],
+               map_size: Tuple[float, float],
+               label: str) -> Optional[PlanSnapshot]:
+    planner = AStar([Obstacle2D.from_dict(obstacle) for obstacle in obstacles], map_size)
     start_time = time.time()
     result = planner.plan(start, goal, heuristic_method="euclidean")
-    planning_time = time.time() - start_time
+    end_time = time.time()
 
-    if result:
-        theoretical_dist = math.sqrt((goal[0]-start[0])**2 + (goal[1]-start[1])**2)
-        metrics = PathMetrics.calculate_all(result, start_time, time.time(),
-                                           theoretical_distance=theoretical_dist,
-                                           map_size=map_size)
-        print(f"  [{agent_type}] Path: {metrics['path_length']:.2f}m, "
-              f"{metrics['num_waypoints']} pts, turns: {metrics['num_turns']}, "
-              f"smoothness: {metrics['smoothness']:.3f}, time: {metrics['computation_time_ms']:.1f}ms")
-        return PathResult(status="complete", points=result['points'], metrics=metrics)
-    else:
-        print(f"  [{agent_type}] Planning failed!")
-        return PathResult(status="failed", points=[], metrics={})
+    if not result:
+        return None
 
+    result["points"] = simplify_path_with_line_of_sight(result["points"], obstacles)
 
-def run_boundary_planning(obstacles: List[Dict], map_size: Tuple,
-                         start: Tuple, boundary: Tuple, agent_type: str) -> PathResult:
-    """Plan shortest path from start to boundary point (not straight line)"""
-    print(f"\n  [{agent_type}] Planning to boundary: {boundary}")
-
-    obs_objects = [Obstacle2D.from_dict(obs) for obs in obstacles]
-    planner = AStar(obs_objects, map_size)
-
-    start_time = time.time()
-    result = planner.plan(start, boundary, heuristic_method="euclidean")
-    planning_time = time.time() - start_time
-
-    if result:
-        theoretical_dist = math.sqrt((boundary[0]-start[0])**2 + (boundary[1]-start[1])**2)
-        metrics = PathMetrics.calculate_all(result, start_time, time.time(),
-                                           theoretical_distance=theoretical_dist,
-                                           map_size=map_size)
-        print(f"  [{agent_type}] Boundary path: {metrics['path_length']:.2f}m, "
-              f"turns: {metrics['num_turns']}")
-        return PathResult(status="partial", points=result['points'], metrics=metrics,
-                         boundary_point={'x': boundary[0], 'y': boundary[1]},
-                         reason="Goal outside perception radius")
-    else:
-        print(f"  [{agent_type}] Boundary planning failed!")
-        return PathResult(status="failed", points=[], metrics={})
+    theoretical_distance = math.sqrt((goal[0] - start[0]) ** 2 + (goal[1] - start[1]) ** 2)
+    metrics = PathMetrics.calculate_all(
+        result,
+        start_time,
+        end_time,
+        theoretical_distance=theoretical_distance,
+        map_size=map_size,
+    )
+    return PlanSnapshot(
+        label=label,
+        start={"x": start[0], "y": start[1]},
+        goal={"x": goal[0], "y": goal[1]},
+        points=result["points"],
+        metrics=metrics,
+        obstacle_count=len(obstacles),
+    )
 
 
-def run_simplification(result: PathResult, agent_type: str) -> PathResult:
-    """Run path simplification"""
-    if not result.points:
-        return result
-
-    points = result.points
-    simplified = rdp_simplify([(p['x'], p['y']) for p in points], epsilon=1.5)
-
-    original_length = sum(((points[i]['x']-points[i-1]['x'])**2 +
-                          (points[i]['y']-points[i-1]['y'])**2)**0.5
-                         for i in range(1, len(points)))
-    simplified_length = sum(((simplified[i][0]-simplified[i-1][0])**2 +
-                           (simplified[i][1]-simplified[i-1][1])**2)**0.5
-                           for i in range(1, len(simplified)))
-
-    print(f"  [{agent_type}] Simplified: {len(points)} -> {len(simplified)} pts "
-          f"({100*(len(points)-len(simplified))/len(points):.1f}% reduction)")
-
-    result.points = [{'x': p[0], 'y': p[1]} for p in simplified]
-    result.metrics['simplified_length'] = round(simplified_length, 2)
-    result.metrics['simplified_points'] = len(simplified)
-
-    return result
+def point_distance(point_a: Sequence[float], point_b: Sequence[float]) -> float:
+    return math.sqrt((point_a[0] - point_b[0]) ** 2 + (point_a[1] - point_b[1]) ** 2)
 
 
-def fuse_paths(uav_result: PathResult, dog_result: PathResult) -> Tuple[PathResult, Dict]:
-    """Fuse two paths and select optimal"""
-    decision = {
-        'uav_status': uav_result.status,
-        'dog_status': dog_result.status,
-        'selected': None,
-        'reason': [],
-        'metrics_comparison': {}
+def format_semantic_name(semantic_type: str) -> str:
+    mapping = {
+        "crawl_under_wall": "可钻行矮墙",
+        "low_wall": "可钻行矮墙",
+        "swamp": "沼泽",
+        "quicksand": "流沙",
+        "water": "水面",
+        "dead_end_wall": "死胡同墙体",
+        "building": "建筑",
+        "generic": "普通障碍物",
     }
+    return mapping.get(semantic_type, semantic_type)
 
-    if uav_result.status != 'complete':
-        decision['selected'] = 'dog'
-        decision['reason'].append("UAV planning failed, use Dog path")
-        return dog_result, decision
 
-    if dog_result.status == 'complete':
-        uav_metrics = uav_result.metrics
-        dog_metrics = dog_result.metrics
+def obstacle_style(obstacle: Dict, view: str, discovered: bool = False) -> Optional[Dict]:
+    semantic_type = obstacle_semantic_type(obstacle)
 
-        decision['metrics_comparison'] = {
-            'length_uav': uav_metrics.get('path_length'),
-            'length_dog': dog_metrics.get('path_length'),
-            'turns_uav': uav_metrics.get('num_turns'),
-            'turns_dog': dog_metrics.get('num_turns'),
-            'smoothness_uav': uav_metrics.get('smoothness'),
-            'smoothness_dog': dog_metrics.get('smoothness')
+    if view == 'uav' and semantic_type in SWAMP_TYPES:
+        return None
+    if view == 'fused' and semantic_type in SWAMP_TYPES and not discovered:
+        return None
+
+    if semantic_type in CRAWL_TYPES:
+        if view == 'uav' or (view == 'fused' and not discovered):
+            return {
+                'facecolor': '#9E9E9E',
+                'edgecolor': '#424242',
+                'alpha': 0.9,
+                'linewidth': 2,
+                'linestyle': '-',
+                'hatch': None,
+            }
+        return {
+            'facecolor': COLORS['crawl_fill'],
+            'edgecolor': COLORS['crawl_edge'],
+            'alpha': 0.55,
+            'linewidth': 2,
+            'linestyle': '--',
+            'hatch': '///',
         }
 
-        length_uav = uav_metrics.get('path_length', float('inf'))
-        length_dog = dog_metrics.get('path_length', float('inf'))
+    if semantic_type in SWAMP_TYPES:
+        return {
+            'facecolor': COLORS['swamp_fill'],
+            'edgecolor': COLORS['swamp_edge'],
+            'alpha': 0.45,
+            'linewidth': 2,
+            'linestyle': '-',
+            'hatch': 'xx',
+        }
 
-        if length_dog > 0:
-            length_diff_pct = (length_uav - length_dog) / length_dog * 100
+    if obstacle.get('type') == 'circle':
+        return {
+            'facecolor': COLORS['debris'],
+            'edgecolor': '#37474F',
+            'alpha': 0.8,
+            'linewidth': 1.8,
+            'linestyle': '-',
+            'hatch': None,
+        }
 
-            if length_diff_pct < -5:
-                decision['selected'] = 'uav'
-                decision['reason'].append(f"UAV path shorter by {abs(length_diff_pct):.1f}%")
-            elif length_diff_pct > 5:
-                decision['selected'] = 'dog'
-                decision['reason'].append(f"Dog path shorter by {length_diff_pct:.1f}%")
-            else:
-                turns_uav = uav_metrics.get('num_turns', 0)
-                turns_dog = dog_metrics.get('num_turns', 0)
-
-                if turns_uav < turns_dog:
-                    decision['selected'] = 'uav'
-                    decision['reason'].append(f"UAV fewer turns ({turns_uav} vs {turns_dog})")
-                elif turns_dog < turns_uav:
-                    decision['selected'] = 'dog'
-                    decision['reason'].append(f"Dog fewer turns ({turns_dog} vs {turns_uav})")
-                else:
-                    smooth_uav = uav_metrics.get('smoothness', 0)
-                    smooth_dog = dog_metrics.get('smoothness', 0)
-
-                    if smooth_uav > smooth_dog:
-                        decision['selected'] = 'uav'
-                        decision['reason'].append(f"UAV smoother ({smooth_uav:.3f} vs {smooth_dog:.3f})")
-                    else:
-                        decision['selected'] = 'dog'
-                        decision['reason'].append(f"Dog smoother ({smooth_dog:.3f} vs {smooth_uav:.3f})")
-
-    elif dog_result.status == 'partial':
-        decision['selected'] = 'uav'
-        decision['reason'].append("Dog can only plan to boundary, use UAV full path")
-        decision['reason'].append(dog_result.reason)
-
-    else:
-        decision['selected'] = 'uav'
-        decision['reason'].append("Dog planning failed, use UAV path")
-
-    if not decision['reason']:
-        decision['reason'].append("Use UAV path (default)")
-        decision['selected'] = 'uav'
-
-    final_result = uav_result if decision['selected'] == 'uav' else dog_result
-    final_result.status = 'final'
-
-    return final_result, decision
+    return {
+        'facecolor': COLORS['wall'] if obstacle.get('type') == 'wall' else COLORS['building'],
+        'edgecolor': '#2E2723',
+        'alpha': 0.85,
+        'linewidth': 2,
+        'linestyle': '-',
+        'hatch': None,
+    }
 
 
-def visualize_comparison(config: Dict, uav_result: PathResult, dog_result: PathResult,
-                        final_result: PathResult, decision: Dict, output_path: str):
-    """Visualize path comparison"""
+def draw_obstacle(ax, obstacle: Dict, view: str = 'physical', discovered: bool = False):
+    style = obstacle_style(obstacle, view, discovered=discovered)
+    if style is None:
+        return
+
+    obstacle_type = obstacle.get('type', 'rectangle')
+    if obstacle_type == 'rectangle':
+        x_pos = obstacle['position']['x']
+        y_pos = obstacle['position']['y']
+        width = obstacle['size']['width']
+        height = obstacle['size']['height']
+        patch = plt.Rectangle(
+            (x_pos - width / 2, y_pos - height / 2),
+            width,
+            height,
+            **style,
+        )
+        ax.add_patch(patch)
+        return
+
+    if obstacle_type == 'circle':
+        patch = plt.Circle(
+            (obstacle['position']['x'], obstacle['position']['y']),
+            obstacle['size']['radius'],
+            **style,
+        )
+        ax.add_patch(patch)
+        return
+
+    if obstacle_type == 'wall':
+        x1 = obstacle['start_point']['x']
+        y1 = obstacle['start_point']['y']
+        x2 = obstacle['end_point']['x']
+        y2 = obstacle['end_point']['y']
+        width = obstacle.get('width', 1)
+        dx = x2 - x1
+        dy = y2 - y1
+        length = math.sqrt(dx * dx + dy * dy)
+        if length < 1e-9:
+            return
+        nx = -dy / length * width / 2
+        ny = dx / length * width / 2
+        patch = plt.Polygon(
+            [(x1 + nx, y1 + ny), (x2 + nx, y2 + ny), (x2 - nx, y2 - ny), (x1 - nx, y1 - ny)],
+            **style,
+        )
+        ax.add_patch(patch)
+        return
+
+    if obstacle_type == 'polygon':
+        patch = plt.Polygon(
+            [(vertex['x'], vertex['y']) for vertex in obstacle['vertices']],
+            closed=True,
+            **style,
+        )
+        ax.add_patch(patch)
+
+
+def draw_path(ax,
+              points: List[Dict[str, float]],
+              color: str,
+              label: str,
+              linestyle: str = '-',
+              linewidth: float = 2.5,
+              alpha: float = 0.95):
+    if len(points) < 2:
+        return
+    xs = [point['x'] for point in points]
+    ys = [point['y'] for point in points]
+    ax.plot(xs, ys, linestyle=linestyle, color=color, linewidth=linewidth, alpha=alpha, label=label)
+
+
+def decorate_axes(ax, title: str, map_size: Tuple[float, float], start: Tuple[float, float], goal: Tuple[float, float]):
+    ax.scatter(start[0], start[1], c=COLORS['start'], s=180, marker='s', edgecolors='black', linewidths=1.5, zorder=6)
+    ax.scatter(goal[0], goal[1], c=COLORS['goal'], s=220, marker='*', edgecolors='black', linewidths=1.2, zorder=6)
+    ax.set_xlim(-2, map_size[0] + 2)
+    ax.set_ylim(-2, map_size[1] + 2)
+    ax.set_xlabel('X (m)')
+    ax.set_ylabel('Y (m)')
+    ax.set_title(title, fontsize=12, fontweight='bold')
+    ax.grid(True, alpha=0.25)
+    ax.set_aspect('equal')
+    ax.set_facecolor(COLORS['background'])
+
+
+def draw_event_overlays(ax, events: List[TriggerEvent], radius: float):
+    for event in events:
+        x_pos = event.stop_point['x']
+        y_pos = event.stop_point['y']
+        circle = plt.Circle((x_pos, y_pos), radius, fill=False, color=COLORS['circle'],
+                            linestyle='--', linewidth=1.5, alpha=0.8)
+        ax.add_patch(circle)
+        ax.scatter(x_pos, y_pos, c=COLORS['event'], s=55, zorder=7)
+        ax.text(x_pos + 0.8, y_pos + 0.8, f"E{event.index}", color=COLORS['event'], fontsize=9, weight='bold')
+
+
+def simulate_scenario(config: Dict) -> ScenarioResult:
     map_size = (config['map_size']['x'], config['map_size']['y'])
     start = (config['start']['x'], config['start']['y'])
     goal = (config['goal']['x'], config['goal']['y'])
-    radius = config.get('perception_radius', 30)
+    radius = config.get('perception_radius', 12)
 
-    fig, axes = plt.subplots(1, 3, figsize=(24, 8))
+    result = ScenarioResult(config=config, initial_plan=None)
+    current_position = start
+    result.executed_trace.append({"x": start[0], "y": start[1]})
 
-    full_obstacles = config.get('obstacles', [])
-    dog_config = generate_dog_map(config)
-    dog_obstacles = dog_config.get('obstacles', [])
+    physical_obstacles = get_physical_obstacles(config)
+    special_count = sum(1 for obstacle in physical_obstacles if obstacle_semantic_type(obstacle) in (CRAWL_TYPES | SWAMP_TYPES))
+    max_iterations = max(4, special_count + 4)
 
-    for ax in axes:
-        for obs in full_obstacles:
-            draw_obstacle(ax, obs)
-        ax.scatter(start[0], start[1], c=COLORS['start'], s=300, marker='s', zorder=5,
-                   label='Start', edgecolors='black', linewidths=2)
-        ax.scatter(goal[0], goal[1], c=COLORS['goal'], s=300, marker='*', zorder=5,
-                   label='Goal', edgecolors='black', linewidths=2)
+    for _ in range(max_iterations):
+        planning_obstacles = build_fused_planning_obstacles(config, result.discovered_ids)
+        plan_label = f"P_{len(result.plans)}"
+        snapshot = plan_route(current_position, goal, planning_obstacles, map_size, plan_label)
+        if snapshot is None:
+            result.failure_reason = f"{plan_label} 规划失败"
+            return result
 
-    circle = plt.Circle(start, radius, fill=False, color=COLORS['boundary'],
-                        linewidth=2, linestyle='--', label=f'R={radius}')
-    axes[0].add_patch(circle)
+        result.plans.append(snapshot)
+        if result.initial_plan is None:
+            result.initial_plan = snapshot
 
-    axes[0].set_xlim(-2, map_size[0] + 2)
-    axes[0].set_ylim(-2, map_size[1] + 2)
-    axes[0].set_xlabel('X (meters)', fontsize=12)
-    axes[0].set_ylabel('Y (meters)', fontsize=12)
-    axes[0].set_title(f"Full Map (UAV View)\n{len(full_obstacles)} obstacles", 
-                      fontsize=12, fontweight='bold')
-    axes[0].legend(loc='upper left', fontsize=10)
-    axes[0].grid(True, alpha=0.3)
-    axes[0].set_aspect('equal')
-    axes[0].set_facecolor(COLORS['background'])
+        candidate = find_next_trigger(snapshot.points, config, radius, result.discovered_ids)
+        if candidate is None:
+            merge_trace(result.executed_trace, snapshot.points)
+            result.success = True
+            return result
 
-    for obs in dog_obstacles:
-        draw_obstacle(axes[1], obs)
-    
-    draw_mosaic_region(axes[1], start, radius, map_size)
+        partial_trace = clip_path_to_trigger(snapshot.points, candidate)
+        merge_trace(result.executed_trace, partial_trace)
+        stop_point = partial_trace[-1]
+        current_position = (stop_point['x'], stop_point['y'])
 
-    axes[1].set_xlim(-2, map_size[0] + 2)
-    axes[1].set_ylim(-2, map_size[1] + 2)
-    axes[1].set_xlabel('X (meters)', fontsize=12)
-    axes[1].set_ylabel('Y (meters)', fontsize=12)
-    axes[1].set_title(f"Dog View (R={radius})\n{len(dog_obstacles)} obstacles visible\nGray = Unknown region", 
-                      fontsize=11, fontweight='bold')
-    axes[1].legend(loc='upper left', fontsize=10)
-    axes[1].grid(True, alpha=0.3)
-    axes[1].set_aspect('equal')
-    axes[1].set_facecolor(COLORS['background'])
+        triggered_obstacle = next((obstacle for obstacle in physical_obstacles if obstacle['id'] == candidate.obstacle_id), None)
+        if triggered_obstacle is None:
+            result.failure_reason = "触发点未找到对应障碍物"
+            return result
 
-    if uav_result.points:
-        ux = [p['x'] for p in uav_result.points]
-        uy = [p['y'] for p in uav_result.points]
-        axes[2].plot(ux, uy, '-', color=COLORS['uav'], linewidth=3, alpha=0.7,
-                    label=f'UAV Path ({uav_result.metrics.get("path_length", "N/A")}m)')
+        if not obstacle_visible_from_position(triggered_obstacle, current_position, radius):
+            result.failure_reason = "触发障碍物不在机器狗当前视域内"
+            return result
 
-    if dog_result.points:
-        dx = [p['x'] for p in dog_result.points]
-        dy = [p['y'] for p in dog_result.points]
-        label = f'Dog Path ({dog_result.metrics.get("path_length", "N/A")}m)'
-        if dog_result.status == 'partial':
-            label += ' (to boundary)'
-        axes[2].plot(dx, dy, '-', color=COLORS['dog'], linewidth=3, alpha=0.7, label=label)
-        
-        if dog_result.boundary_point:
-            axes[2].scatter(dog_result.boundary_point['x'], dog_result.boundary_point['y'],
-                           c=COLORS['boundary'], s=200, marker='o', zorder=6,
-                           edgecolors='black', linewidths=2, label='Boundary Point')
+        packets = [build_semantic_packet(triggered_obstacle)]
+        visible_ids = [triggered_obstacle['id']]
+        result.discovered_ids.add(triggered_obstacle['id'])
+        result.events.append(
+            TriggerEvent(
+                index=len(result.events) + 1,
+                stop_point=stop_point,
+                triggered_obstacle_id=candidate.obstacle_id,
+                uploaded_packets=packets,
+                visible_ids=visible_ids,
+                source_plan=snapshot.label,
+            )
+        )
 
-    if final_result.points:
-        fx = [p['x'] for p in final_result.points]
-        fy = [p['y'] for p in final_result.points]
-        axes[2].plot(fx, fy, '--', color=COLORS['final'], linewidth=4,
-                    label=f'Final ({final_result.metrics.get("path_length", "N/A")}m)')
+        if point_distance(current_position, goal) < 1.0:
+            result.success = True
+            return result
 
-    axes[2].set_xlim(-2, map_size[0] + 2)
-    axes[2].set_ylim(-2, map_size[1] + 2)
-    axes[2].set_xlabel('X (meters)', fontsize=12)
-    axes[2].set_ylabel('Y (meters)', fontsize=12)
-
-    reason_text = ' | '.join(decision.get('reason', []))
-    axes[2].set_title(f"Path Comparison\nSelected: {decision.get('selected', 'N/A').upper()} | {reason_text}",
-                      fontsize=11, fontweight='bold')
-    axes[2].legend(loc='upper left', fontsize=10)
-    axes[2].grid(True, alpha=0.3)
-    axes[2].set_aspect('equal')
-    axes[2].set_facecolor(COLORS['background'])
-
-    plt.suptitle(f"{config['name']}\nUAV vs Dog Path Fusion", fontsize=14, fontweight='bold', y=1.02)
-
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=150, bbox_inches='tight', facecolor='white')
-    plt.close()
-    print(f"  Visualization saved: {output_path}")
+    result.failure_reason = "超过最大重规划次数，疑似陷入循环"
+    return result
 
 
-def visualize_metrics(uav_metrics: Dict, dog_metrics: Dict, decision: Dict,
-                    output_path: str):
-    """Visualize metrics comparison table"""
-    def fmt(val, fmt_str='.3f'):
-        if val is None or val == 'N/A':
-            return 'N/A'
-        try:
-            return f"{val:{fmt_str}}"
-        except (ValueError, TypeError):
-            return str(val)
+def create_fusion_figure(result: ScenarioResult, output_path: str):
+    config = result.config
+    map_size = (config['map_size']['x'], config['map_size']['y'])
+    start = (config['start']['x'], config['start']['y'])
+    goal = (config['goal']['x'], config['goal']['y'])
+    radius = config.get('perception_radius', 12)
 
-    fig, ax = plt.subplots(figsize=(12, 6))
-    ax.axis('off')
+    fig, axes = plt.subplots(2, 2, figsize=(20, 16))
+    physical_obstacles = get_physical_obstacles(config)
+    uav_obstacles = build_uav_perspective_obstacles(config)
+    dog_semantic_obstacles = build_discovered_semantic_map(config, result.discovered_ids)
+    fused_visual_obstacles = build_fused_visual_obstacles(config, result.discovered_ids)
 
-    metrics_data = [
-        ['Metric', 'UAV', 'Dog', 'Difference'],
-        ['Path Length (m)', fmt(uav_metrics.get('path_length'), '.2f'),
-         fmt(dog_metrics.get('path_length'), '.2f'),
-         fmt(decision['metrics_comparison'].get('length_diff'), '.2f')],
-        ['Waypoints', str(uav_metrics.get('num_waypoints', 'N/A')),
-         str(dog_metrics.get('num_waypoints', 'N/A')), '-'],
-        ['Turns', str(uav_metrics.get('num_turns', 'N/A')),
-         str(dog_metrics.get('num_turns', 'N/A')),
-         str(decision['metrics_comparison'].get('turn_diff', 'N/A'))],
-        ['Smoothness', fmt(uav_metrics.get('smoothness')),
-         fmt(dog_metrics.get('smoothness')),
-         fmt(decision['metrics_comparison'].get('smoothness_diff'))],
-        ['Computation Time (ms)', fmt(uav_metrics.get('computation_time_ms'), '.1f'),
-         fmt(dog_metrics.get('computation_time_ms'), '.1f'),
-         fmt(decision['metrics_comparison'].get('time_diff'), '.1f')],
-        ['Optimality Ratio', fmt(uav_metrics.get('optimality_ratio')),
-         fmt(dog_metrics.get('optimality_ratio')), '-']
+    ax = axes[0, 0]
+    for obstacle in physical_obstacles:
+        draw_obstacle(ax, obstacle, view='physical', discovered=True)
+    if result.executed_trace:
+        draw_path(ax, result.executed_trace, COLORS['executed'], 'Executed trace', linewidth=3.0)
+    draw_event_overlays(ax, result.events, radius)
+    decorate_axes(ax, 'Physical Map', map_size, start, goal)
+
+    ax = axes[0, 1]
+    for obstacle in uav_obstacles:
+        draw_obstacle(ax, obstacle, view='uav', discovered=False)
+    if result.initial_plan:
+        draw_path(ax, result.initial_plan.points, COLORS['initial_path'], f'{result.initial_plan.label} Initial Path')
+    decorate_axes(ax, 'UAV Perspective Map', map_size, start, goal)
+
+    ax = axes[1, 0]
+    for obstacle in dog_semantic_obstacles:
+        draw_obstacle(ax, obstacle, view='dog', discovered=True)
+    if result.executed_trace:
+        draw_path(ax, result.executed_trace, COLORS['executed'], 'Executed trace', linewidth=3.0)
+    draw_event_overlays(ax, result.events, radius)
+    decorate_axes(ax, 'Dog Semantic Discoveries', map_size, start, goal)
+
+    ax = axes[1, 1]
+    for obstacle in fused_visual_obstacles:
+        draw_obstacle(ax, obstacle, view='fused', discovered=obstacle['id'] in result.discovered_ids)
+    if result.initial_plan:
+        draw_path(ax, result.initial_plan.points, COLORS['initial_path'], f'{result.initial_plan.label}', linestyle='--', alpha=0.7)
+    if result.final_plan:
+        draw_path(ax, result.final_plan.points, COLORS['final_path'], f'{result.final_plan.label} Final Path', linewidth=3.0)
+    if result.executed_trace:
+        draw_path(ax, result.executed_trace, COLORS['executed'], 'Executed trace', linewidth=2.8)
+    draw_event_overlays(ax, result.events, radius)
+    decorate_axes(ax, 'UAV Fused Map', map_size, start, goal)
+
+    legend_handles = [
+        mpatches.Patch(facecolor=COLORS['building'], edgecolor='#2E2723', label='Standard obstacle'),
+        mpatches.Patch(facecolor=COLORS['crawl_fill'], edgecolor=COLORS['crawl_edge'], hatch='///', label='Crawl-under wall'),
+        mpatches.Patch(facecolor=COLORS['swamp_fill'], edgecolor=COLORS['swamp_edge'], hatch='xx', label='Swamp / quicksand / water'),
+        plt.Line2D([0], [0], color=COLORS['initial_path'], linestyle='--', label='Initial path P_0'),
+        plt.Line2D([0], [0], color=COLORS['final_path'], linestyle='-', label='Final replanned path'),
+        plt.Line2D([0], [0], color=COLORS['executed'], linestyle='-', label='Executed trace'),
     ]
-
-    table = ax.table(cellText=metrics_data[1:], colLabels=metrics_data[0],
-                     cellLoc='center', loc='center',
-                     colWidths=[0.25, 0.2, 0.2, 0.2])
-    table.auto_set_font_size(False)
-    table.set_fontsize(12)
-    table.scale(1.2, 2)
-
-    for i in range(len(metrics_data[0])):
-        table[(0, i)].set_facecolor('#4472C4')
-        table[(0, i)].set_text_props(color='white', fontweight='bold')
-
-    for i in range(1, len(metrics_data)):
-        if decision.get('selected') == 'uav' and i in [1, 3, 4]:
-            table[(i, 1)].set_facecolor('#90EE90')
-        elif decision.get('selected') == 'dog' and i in [1, 3, 4]:
-            table[(i, 2)].set_facecolor('#90EE90')
-
-    ax.set_title("Path Metrics Comparison\n" +
-                 f"Selected: {decision.get('selected', 'N/A').upper()} | " +
-                 " | ".join(decision.get('reason', [])),
-                 fontsize=14, fontweight='bold', pad=20)
-
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=150, bbox_inches='tight', facecolor='white')
-    plt.close()
-    print(f"  Metrics table saved: {output_path}")
+    fig.legend(handles=legend_handles, loc='lower center', ncol=3, fontsize=10)
+    fig.suptitle(f"{config['name']}\nTangent Trigger + Semantic Upload + Fused Replanning", fontsize=16, fontweight='bold')
+    plt.tight_layout(rect=(0, 0.04, 1, 0.97))
+    plt.savefig(output_path, dpi=160, bbox_inches='tight', facecolor='white')
+    plt.close(fig)
 
 
-def generate_summary_report(config: Dict, uav_result: PathResult, dog_result: PathResult,
-                           final_result: PathResult, decision: Dict, output_path: str):
-    """Generate summary report"""
-    with open(output_path, 'w', encoding='utf-8') as f:
-        f.write("=" * 80 + "\n")
-        f.write("UAV vs Dog Path Fusion Report\n")
-        f.write("=" * 80 + "\n\n")
+def create_metrics_figure(result: ScenarioResult, output_path: str):
+    plan_labels = [plan.label for plan in result.plans]
+    plan_lengths = [plan.metrics.get('path_length', 0.0) for plan in result.plans]
+    waypoints = [plan.metrics.get('num_waypoints', 0) for plan in result.plans]
+    executed_length = PathMetrics.path_length(result.executed_trace)
+    initial_length = result.initial_plan.metrics.get('path_length', 0.0) if result.initial_plan else 0.0
+    final_length = result.final_plan.metrics.get('path_length', 0.0) if result.final_plan else 0.0
 
-        f.write(f"Scenario: {config['name']}\n")
-        f.write(f"Map Size: {config['map_size']['x']} x {config['map_size']['y']}\n")
-        f.write(f"Perception Radius: {config.get('perception_radius', 'N/A')}m\n")
-        f.write(f"Start: ({config['start']['x']}, {config['start']['y']})\n")
-        f.write(f"Goal: ({config['goal']['x']}, {config['goal']['y']})\n\n")
+    crawl_updates = 0
+    swamp_updates = 0
+    for event in result.events:
+        for packet in event.uploaded_packets:
+            if packet['semantic_type'] in CRAWL_TYPES:
+                crawl_updates += 1
+            if packet['semantic_type'] in SWAMP_TYPES:
+                swamp_updates += 1
 
-        f.write("-" * 50 + "\n")
-        f.write("UAV Path (Full Map)\n")
-        f.write("-" * 50 + "\n")
-        if uav_result.metrics:
-            for key, value in uav_result.metrics.items():
-                f.write(f"  {key}: {value}\n")
+    fig, axes = plt.subplots(2, 2, figsize=(16, 11))
 
-        f.write("\n" + "-" * 50 + "\n")
-        f.write("Dog Path (Partial Map)\n")
-        f.write("-" * 50 + "\n")
-        f.write(f"  Status: {dog_result.status}\n")
-        if dog_result.boundary_point:
-            f.write(f"  Boundary Point: ({dog_result.boundary_point['x']:.2f}, {dog_result.boundary_point['y']:.2f})\n")
-        if dog_result.reason:
-            f.write(f"  Reason: {dog_result.reason}\n")
-        if dog_result.metrics:
-            for key, value in dog_result.metrics.items():
-                f.write(f"  {key}: {value}\n")
+    axes[0, 0].plot(plan_labels, plan_lengths, marker='o', color=COLORS['final_path'], linewidth=2.5)
+    axes[0, 0].set_title('Path Length After Each Replan')
+    axes[0, 0].set_ylabel('Length (m)')
+    axes[0, 0].grid(True, alpha=0.25)
 
-        f.write("\n" + "-" * 50 + "\n")
-        f.write("Fusion Decision\n")
-        f.write("-" * 50 + "\n")
-        f.write(f"  Selected Path: {decision.get('selected', 'N/A').upper()}\n")
-        f.write(f"  Reasons:\n")
-        for reason in decision.get('reason', []):
-            f.write(f"    - {reason}\n")
+    axes[0, 1].bar(plan_labels, waypoints, color=COLORS['initial_path'], alpha=0.8)
+    axes[0, 1].set_title('Waypoints Per Plan')
+    axes[0, 1].set_ylabel('Waypoints')
+    axes[0, 1].grid(True, axis='y', alpha=0.25)
 
-        if final_result.metrics:
-            f.write(f"\n  Final Path Metrics:\n")
-            for key, value in final_result.metrics.items():
-                f.write(f"    {key}: {value}\n")
+    compare_labels = ['Initial plan', 'Final plan', 'Executed trace']
+    compare_values = [initial_length, final_length, executed_length]
+    axes[1, 0].bar(compare_labels, compare_values,
+                   color=[COLORS['initial_path'], COLORS['final_path'], COLORS['executed']], alpha=0.85)
+    axes[1, 0].set_title('Length Comparison')
+    axes[1, 0].set_ylabel('Length (m)')
+    axes[1, 0].grid(True, axis='y', alpha=0.25)
 
-    print(f"Summary report saved: {output_path}")
+    event_labels = ['Triggers', 'Uploads', 'Low-wall fixes', 'Swamp fixes']
+    event_values = [len(result.events), sum(len(event.uploaded_packets) for event in result.events), crawl_updates, swamp_updates]
+    axes[1, 1].bar(event_labels, event_values,
+                   color=[COLORS['circle'], COLORS['event'], COLORS['crawl_edge'], COLORS['swamp_edge']], alpha=0.85)
+    axes[1, 1].set_title('Cooperation Events')
+    axes[1, 1].grid(True, axis='y', alpha=0.25)
+
+    plt.suptitle(f"{result.config['name']} - Replanning Metrics", fontsize=15, fontweight='bold')
+    plt.tight_layout(rect=(0, 0, 1, 0.96))
+    plt.savefig(output_path, dpi=160, bbox_inches='tight', facecolor='white')
+    plt.close(fig)
+
+
+def write_report(result: ScenarioResult, output_path: str):
+    config = result.config
+    physical_obstacles = get_physical_obstacles(config)
+    crawl_ids = [obstacle['id'] for obstacle in physical_obstacles if obstacle_semantic_type(obstacle) in CRAWL_TYPES]
+    swamp_ids = [obstacle['id'] for obstacle in physical_obstacles if obstacle_semantic_type(obstacle) in SWAMP_TYPES]
+
+    with open(output_path, 'w', encoding='utf-8') as file:
+        file.write(f"Scenario: {config['name']}\n")
+        file.write(f"Description: {config['description']}\n")
+        file.write(f"Map Size: {config['map_size']['x']} x {config['map_size']['y']}\n")
+        file.write(f"Start: ({config['start']['x']}, {config['start']['y']})\n")
+        file.write(f"Goal: ({config['goal']['x']}, {config['goal']['y']})\n")
+        file.write(f"Perception Radius: {config.get('perception_radius', 12)}\n\n")
+
+        file.write("=== Semantic Obstacles ===\n")
+        file.write(f"Crawl-under walls: {crawl_ids}\n")
+        file.write(f"Swamp / quicksand / water: {swamp_ids}\n\n")
+
+        file.write("=== Planning Summary ===\n")
+        for plan in result.plans:
+            file.write(f"{plan.label}: length={plan.metrics.get('path_length')}m, ")
+            file.write(f"waypoints={plan.metrics.get('num_waypoints')}, ")
+            file.write(f"turns={plan.metrics.get('num_turns')}, ")
+            file.write(f"time={plan.metrics.get('computation_time_ms')}ms, ")
+            file.write(f"obstacles={plan.obstacle_count}\n")
+        file.write("\n")
+
+        file.write("=== Trigger Events ===\n")
+        if not result.events:
+            file.write("No trigger event. Initial UAV path reached goal directly.\n")
+        for event in result.events:
+            file.write(f"E{event.index} @ ({event.stop_point['x']:.2f}, {event.stop_point['y']:.2f})\n")
+            file.write(f"  source plan: {event.source_plan}\n")
+            file.write(f"  triggered by: {event.triggered_obstacle_id}\n")
+            file.write(f"  visible ids: {event.visible_ids}\n")
+            for packet in event.uploaded_packets:
+                semantic_name = format_semantic_name(packet['semantic_type'])
+                file.write(f"    - packet {packet['id']}: {semantic_name}\n")
+                file.write(f"      traversable={packet['payload'].get('traversable')}\n")
+                if packet['payload'].get('properties'):
+                    file.write(f"      properties={packet['payload']['properties']}\n")
+            file.write("\n")
+
+        file.write("=== Final Result ===\n")
+        file.write(f"Success: {result.success}\n")
+        if result.failure_reason:
+            file.write(f"Failure Reason: {result.failure_reason}\n")
+        file.write(f"Discovered semantic obstacle ids: {sorted(result.discovered_ids)}\n")
+        file.write(f"Executed trace length: {PathMetrics.path_length(result.executed_trace):.2f}m\n")
+        if result.initial_plan:
+            file.write(f"Initial path length: {result.initial_plan.metrics.get('path_length')}m\n")
+        if result.final_plan:
+            file.write(f"Final path length: {result.final_plan.metrics.get('path_length')}m\n")
+
+
+def scenario_list(base_dir: str) -> List[Tuple[str, str]]:
+    return [
+        ("scenario_a_simple", os.path.join(base_dir, "config/scenarios/scenario_a_simple.json")),
+        ("scenario_b_maze", os.path.join(base_dir, "config/scenarios/scenario_b_maze.json")),
+        ("scenario_c_complex", os.path.join(base_dir, "config/scenarios/scenario_c_complex.json")),
+    ]
 
 
 def main():
     base_dir = os.path.dirname(__file__)
-
-    scenarios = [
-        ("scenario_a_simple", os.path.join(base_dir, "config/scenarios/scenario_a_simple.json")),
-        ("scenario_b_maze", os.path.join(base_dir, "config/scenarios/scenario_b_maze.json")),
-        ("scenario_c_complex", os.path.join(base_dir, "config/scenarios/scenario_c_complex.json"))
-    ]
-
     print("=" * 80)
-    print("UAV vs Dog Path Fusion")
-    print("Dog perception radius: R = min(W, H) / 2")
+    print("事件驱动地空协同仿真")
+    print("机制：相切即触发、语义上传、融合重规划")
     print("=" * 80)
 
-    for scenario_id, scenario_path in scenarios:
+    for scenario_id, scenario_path in scenario_list(base_dir):
         config = load_scenario(scenario_path)
-
-        print(f"\n{'='*70}")
+        print(f"\n{'=' * 70}")
         print(f"Scenario: {config['name']}")
-        print(f"{'='*70}")
+        print(f"Description: {config['description']}")
 
-        start = (config['start']['x'], config['start']['y'])
-        goal = (config['goal']['x'], config['goal']['y'])
-        map_size = (config['map_size']['x'], config['map_size']['y'])
-        radius = config.get('perception_radius', 30)
+        result = simulate_scenario(config)
+        output_dir = os.path.join(base_dir, "output", scenario_id)
+        os.makedirs(output_dir, exist_ok=True)
 
-        print(f"  Map: {map_size[0]}x{map_size[1]}, R={radius}")
-        print(f"  Start: {start}, Goal: {goal}")
+        create_fusion_figure(result, os.path.join(output_dir, f"{scenario_id}_fusion.png"))
+        create_metrics_figure(result, os.path.join(output_dir, f"{scenario_id}_metrics.png"))
+        write_report(result, os.path.join(output_dir, f"{scenario_id}_report.txt"))
 
-        dog_config = generate_dog_map(config)
-        print(f"  UAV obstacles: {len(config.get('obstacles', []))}")
-        print(f"  Dog visible obstacles: {len(dog_config.get('obstacles', []))}")
+        print(f"  success: {result.success}")
+        print(f"  triggers: {len(result.events)}")
+        print(f"  discovered semantic obstacles: {sorted(result.discovered_ids)}")
+        if result.final_plan:
+            print(f"  final path length: {result.final_plan.metrics.get('path_length')}m")
+        if result.failure_reason:
+            print(f"  failure reason: {result.failure_reason}")
 
-        uav_result = run_path_planning(config.get('obstacles', []), map_size,
-                                       start, goal, "UAV")
-        uav_result = run_simplification(uav_result, "UAV")
-
-        start_point = Point(start[0], start[1])
-        goal_point = Point(goal[0], goal[1])
-        boundary_pt, goal_in_range = calculate_perception_boundary(start_point, goal_point, radius)
-
-        if goal_in_range:
-            dog_result = run_path_planning(dog_config.get('obstacles', []), map_size,
-                                          start, goal, "Dog")
-            dog_result = run_simplification(dog_result, "Dog")
-        elif boundary_pt:
-            dog_result = run_boundary_planning(
-                dog_config.get('obstacles', []), map_size,
-                start, (boundary_pt.x, boundary_pt.y), "Dog"
-            )
-            dog_result = run_simplification(dog_result, "Dog")
-        else:
-            dog_result = PathResult(status="failed", points=[], metrics={},
-                                   reason="Cannot calculate boundary point")
-
-        os.makedirs("output", exist_ok=True)
-        os.makedirs(f"output/{scenario_id}", exist_ok=True)
-
-        final_result, decision = fuse_paths(uav_result, dog_result)
-
-        print(f"\n{'='*50}")
-        print(f"Final Decision: {decision.get('selected', 'N/A').upper()}")
-        for reason in decision.get('reason', []):
-            print(f"  - {reason}")
-
-        visualize_comparison(config, uav_result, dog_result, final_result, decision,
-                           f"output/{scenario_id}/{scenario_id}_fusion.png")
-
-        if uav_result.metrics and dog_result.metrics:
-            visualize_metrics(uav_result.metrics, dog_result.metrics, decision,
-                             f"output/{scenario_id}/{scenario_id}_metrics.png")
-
-        generate_summary_report(config, uav_result, dog_result, final_result, decision,
-                               f"output/{scenario_id}/{scenario_id}_report.txt")
-
-    print(f"\n{'='*80}")
-    print("All scenarios completed!")
+    print(f"\n{'=' * 80}")
+    print("All scenarios completed.")
     print("=" * 80)
 
 
